@@ -1,3 +1,7 @@
+// 2D game with canvas example: https://github.com/end3r/Gamedev-Canvas-workshop/blob/gh-pages/lesson10.html
+// Get screen size: https://developer.mozilla.org/en-US/docs/Web/API/Window/devicePixelRatio
+// and window.screen.{width,height{
+
 $( document ).ready(function() {
     navigator.requestMIDIAccess()
         .then(onMIDISuccess, onMIDIFailure);
