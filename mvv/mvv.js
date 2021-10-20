@@ -38,9 +38,10 @@ var ROLL_H = H - BAR_H;
 var AW = W - HM * 2;
 var AH = BAR_H - VM;
 
-
 var MIN_NOTE = 21;
 var MAX_NOTE = 108;
+
+var ROLL_SPEED = 2;
 
 // Initialize notes
 var tick = 0;
@@ -90,7 +91,7 @@ function onMIDIFailure() {
 }
 
 function getMIDIMessage(midiMessage) {
-    console.log(midiMessage);
+    // console.log(midiMessage);
 // Key on
 // <Event(32771-MidiIn {'status': 144, 'data1': 48, 'data2': 80, 'data3': 0, 'timestamp': 1111, 'vice_id': 3}) >
 // Key-off
@@ -171,6 +172,10 @@ function draw() {
     // bar width
     var bw = AW / (MAX_NOTE - MIN_NOTE + 1) - SPACING
 
+    croll.drawImage(canvasRoll, 0, ROLL_SPEED);
+    croll.fillStyle = 'rgb(0,0,0)';
+    croll.fillRect(0, 0, AW, ROLL_SPEED - 1);
+
     for (var i = MIN_NOTE; i <= MAX_NOTE; i++) {
         var note = notes[i]
         var color = get_color(note)
@@ -186,6 +191,8 @@ function draw() {
         cbar.fillRect(bl, VM + AH - bh, bw, bh);
         // todo: draw roll bar
         // pg.draw.rect(self.roll, color, (bl, 0, bw, ROLL_SCROLL_AMOUNT))
+        croll.fillStyle = cbar.fillStyle;
+        croll.fillRect(bl, 0, bw, ROLL_SPEED - 1);
     }
 
     cbar.fillStyle = to_color_str(MID_LINE_COLOR);
