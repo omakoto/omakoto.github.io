@@ -50,6 +50,8 @@ for (var i = 0; i < NOTES_COUNT; i++) {
     notes[i] = [false, 0, 0]; // note on/off, velocity, tick
 }
 
+var onNoteCount = 0;
+
 // Initialize the canvases
 var canvasBar = document.getElementById("bar");
 var cbar = canvasBar.getContext("2d");
@@ -98,6 +100,7 @@ function getMIDIMessage(midiMessage) {
 // <Event(32771-MidiIn {'status': 128, 'data1': 48, 'data2': 0, 'data3': 0, 'timestamp': 1364, 'vice_id': 3}) >
     var d = midiMessage.data;
     if (d[0] == 144) {
+        onNoteCount++;
         notes[d[1]][0] = true;
         notes[d[1]][1] = d[2];
         notes[d[1]][3] = tick;
@@ -107,7 +110,7 @@ function getMIDIMessage(midiMessage) {
     }
 }
 
-function HSVtoRGB(h, s, v) {
+function hsvToRgb(h, s, v) {
     var r, g, b, i, f, p, q, t;
     if (arguments.length === 1) {
         s = h.s, v = h.v, h = h.h;
@@ -132,7 +135,7 @@ function HSVtoRGB(h, s, v) {
     ];
 }
 
-function get_color(note) {
+function getColor(note) {
     var MAX_H = 0.4
     var h = MAX_H - (MAX_H * note[1] / 127)
     var s = 0.9
@@ -141,17 +144,17 @@ function get_color(note) {
     if (l <= 0) {
         return null;
     }
-    return HSVtoRGB(h, s, l)
+    return hsvToRgb(h, s, l)
 }
 
-function get_on_color(count) {
+function getOnColor(count) {
     var h = Math.max(0, 0.2 - count * 0.03)
     var s = Math.min(1, 0.3 + 0.2 * count)
     var l = Math.min(1, 0.4 + 0.2 * count)
-    return HSVtoRGB(h, s, l)
+    return hsvToRgb(h, s, l)
 }
 
-function to_color_str(rgb) {
+function toColorStr(rgb) {
     return 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
 }
 
@@ -176,9 +179,15 @@ function draw() {
     croll.fillStyle = 'rgb(0,0,0)';
     croll.fillRect(0, 0, AW, ROLL_SPEED);
 
+    if (onNoteCount > 0) {
+        croll.fillStyle = toColorStr(getOnColor(onNoteCount));
+        croll.fillRect(0, ROLL_SCROLL_AMOUNT - 2, AW, 2);
+        // croll(self.roll, self._get_on_color(self.on), (0, ROLL_SCROLL_AMOUNT - 1, aw, 1))
+    }
+
     for (var i = MIN_NOTE; i <= MAX_NOTE; i++) {
         var note = notes[i]
-        var color = get_color(note)
+        var color = getColor(note)
         if (color === null) continue
 
         // bar left
@@ -187,7 +196,7 @@ function draw() {
         // bar height
         var bh = AH * note[1] / 127
 
-        cbar.fillStyle = to_color_str(color);
+        cbar.fillStyle = toColorStr(color);
         cbar.fillRect(bl, VM + AH - bh, bw, bh);
         // todo: draw roll bar
         // pg.draw.rect(self.roll, color, (bl, 0, bw, ROLL_SCROLL_AMOUNT))
@@ -195,11 +204,11 @@ function draw() {
         croll.fillRect(bl, 0, bw, ROLL_SPEED);
     }
 
-    cbar.fillStyle = to_color_str(MID_LINE_COLOR);
+    cbar.fillStyle = toColorStr(MID_LINE_COLOR);
     cbar.fillRect(HM, VM + AH * 0.25, AW, LINE_WIDTH)
     cbar.fillRect(HM, VM + AH * 0.5, AW, LINE_WIDTH)
 
-    cbar.fillStyle = to_color_str(BASE_LINE_COLOR);
+    cbar.fillStyle = toColorStr(BASE_LINE_COLOR);
     cbar.fillRect(HM, VM + AH - LINE_WIDTH, AW, LINE_WIDTH)
 
 
@@ -212,6 +221,7 @@ function draw() {
     // ctx.closePath();
     // ctx.stroke();
 
+    onNoteCount = 0;
     requestAnimationFrame(draw)
 }
 
