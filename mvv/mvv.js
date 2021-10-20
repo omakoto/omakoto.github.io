@@ -41,7 +41,7 @@ var AH = BAR_H - VM;
 var MIN_NOTE = 21;
 var MAX_NOTE = 108;
 
-var ROLL_SPEED = 2;
+var ROLL_SPEED = 4;
 
 // Initialize notes
 var tick = 0;
@@ -174,7 +174,7 @@ function draw() {
 
     croll.drawImage(canvasRoll, 0, ROLL_SPEED);
     croll.fillStyle = 'rgb(0,0,0)';
-    croll.fillRect(0, 0, AW, ROLL_SPEED - 1);
+    croll.fillRect(0, 0, AW, ROLL_SPEED);
 
     for (var i = MIN_NOTE; i <= MAX_NOTE; i++) {
         var note = notes[i]
@@ -192,7 +192,7 @@ function draw() {
         // todo: draw roll bar
         // pg.draw.rect(self.roll, color, (bl, 0, bw, ROLL_SCROLL_AMOUNT))
         croll.fillStyle = cbar.fillStyle;
-        croll.fillRect(bl, 0, bw, ROLL_SPEED - 1);
+        croll.fillRect(bl, 0, bw, ROLL_SPEED);
     }
 
     cbar.fillStyle = to_color_str(MID_LINE_COLOR);
