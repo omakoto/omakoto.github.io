@@ -62,6 +62,9 @@ canvasBar.height = int(H * BAR_RATIO);
 canvasRoll.width = W;
 canvasRoll.height = H - int(H * BAR_RATIO);
 
+croll.fillStyle = 'rgb(0, 0, 0)';
+croll.fillRect(0, 0, canvasRoll.width, canvasRoll.height);
+
 function setCanvasSize() {
     // TODO: Figure out how to do it in CSS
     console.log("Resized");
@@ -190,7 +193,7 @@ function draw() {
     cbar.fillRect(HM, VM + AH * 0.5, AW, LINE_WIDTH)
 
     cbar.fillStyle = to_color_str(BASE_LINE_COLOR);
-    cbar.fillRect(HM, VM + AH, AW, 0)
+    cbar.fillRect(HM, VM + AH - LINE_WIDTH, AW, LINE_WIDTH)
 
 
 
