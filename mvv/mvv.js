@@ -14,8 +14,8 @@ var SPACING = 0.01 // Space between each bar
 
 var LINE_WIDTH = 4
 
-var MID_LINE_COLOR = (200, 200, 255)
-var BASE_LINE_COLOR = (200, 255, 200)
+var MID_LINE_COLOR = [200, 200, 255]
+var BASE_LINE_COLOR = [200, 255, 200]
 
 var BAR_RATIO = 0.3
 
@@ -24,11 +24,23 @@ var ROLL_SCROLL_AMOUNT = 4
 
 var scale = window.devicePixelRatio;
 var W = Math.floor(screen.width * scale);
-var H = Math.floor(screen.width * scale);
+var H = Math.floor(screen.height * scale);
 
-
+// TODO: Do the margin in CSS
 var HM = int(W * HORIZONTAL_MARGIN); // h-margin
 var VM = int(H * VERTICAL_MARGIN); // v-margin
+
+var BAR_H = int(H * BAR_RATIO);
+var ROLL_H = H - BAR_H;
+
+
+// Available width / height, for the bar
+var AW = W - HM * 2;
+var AH = BAR_H - VM;
+
+
+var MIN_NOTE = 21;
+var MAX_NOTE = 108;
 
 // Initialize notes
 var tick = 0;
@@ -135,11 +147,52 @@ function get_on_color(count) {
     return HSVtoRGB(h, s, l)
 }
 
+function to_color_str(rgb) {
+    return 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
+}
+
+function line(ctx, left, top, width, height) {
+    ctx.beginPath();
+    ctx.moveTo(left, top);
+    ctx.lineTo(left + width, top + height);
+    ctx.closePath();
+    ctx.stroke();
+}
+
 function draw() {
     tick++;
 
     cbar.fillStyle = 'rgb(0, 0, 0)';
     cbar.fillRect(0, 0, W, H);
+
+    // bar width
+    var bw = AW / (MAX_NOTE - MIN_NOTE + 1) - SPACING
+
+    for (var i = MIN_NOTE; i <= MAX_NOTE; i++) {
+        var note = notes[i]
+        var color = get_color(note)
+        if (color === null) continue
+
+        // bar left
+        var bl = HM + AW * (i - MIN_NOTE) / (MAX_NOTE - MIN_NOTE + 1)
+
+        // bar height
+        var bh = AH * note[1] / 127
+
+        cbar.fillStyle = to_color_str(color);
+        cbar.fillRect(bl, VM + AH - bh, bw, bh);
+        // todo: draw roll bar
+        // pg.draw.rect(self.roll, color, (bl, 0, bw, ROLL_SCROLL_AMOUNT))
+    }
+
+    cbar.fillStyle = to_color_str(MID_LINE_COLOR);
+    cbar.fillRect(HM, VM + AH * 0.25, AW, LINE_WIDTH)
+    cbar.fillRect(HM, VM + AH * 0.5, AW, LINE_WIDTH)
+
+    cbar.fillStyle = to_color_str(BASE_LINE_COLOR);
+    cbar.fillRect(HM, VM + AH, AW, 0)
+
+
 
     // ctx.strokeStyle = 'rgb(255, 255, 255)';
     // ctx.lineWidth = 1;
@@ -159,3 +212,4 @@ requestAnimationFrame(draw)
 
 navigator.requestMIDIAccess()
     .then(onMIDISuccess, onMIDIFailure);
+
