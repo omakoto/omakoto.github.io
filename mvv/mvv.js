@@ -2,24 +2,63 @@
 // Get screen size: https://developer.mozilla.org/en-US/docs/Web/API/Window/devicePixelRatio
 // and window.screen.{width,height{
 
-var tick = 0;
-var notes = [];
-for (var i = 0; i <= 127; i++) {
-    notes[i] = [false, 0, 0]; // note on/off, velocity, tick
+function int(v) {
+    return Math.floor(v);
 }
 
-var canvas = document.getElementById("main");
-var ctx = canvas.getContext("2d");
+var NOTES_COUNT = 128
+
+var HORIZONTAL_MARGIN = 0.01  // Margin at each side
+var VERTICAL_MARGIN = 0.01  // Margin at top and bottom
+var SPACING = 0.01 // Space between each bar
+
+var LINE_WIDTH = 4
+
+var MID_LINE_COLOR = (200, 200, 255)
+var BASE_LINE_COLOR = (200, 255, 200)
+
+var BAR_RATIO = 0.3
+
+var ROLL_SCROLL_TICKS = 1
+var ROLL_SCROLL_AMOUNT = 4
 
 var scale = window.devicePixelRatio;
 var W = Math.floor(screen.width * scale);
 var H = Math.floor(screen.width * scale);
-canvas.width = W;
-canvas.height = H;
 
-console.log(canvas);
-console.log(ctx);
 
+var HM = int(W * HORIZONTAL_MARGIN); // h-margin
+var VM = int(H * VERTICAL_MARGIN); // v-margin
+
+// Initialize notes
+var tick = 0;
+var notes = [];
+for (var i = 0; i < NOTES_COUNT; i++) {
+    notes[i] = [false, 0, 0]; // note on/off, velocity, tick
+}
+
+// Initialize the canvases
+var canvasBar = document.getElementById("bar");
+var cbar = canvasBar.getContext("2d");
+
+var canvasRoll = document.getElementById("roll");
+var croll = canvasRoll.getContext("2d");
+
+canvasBar.width = W;
+canvasBar.height = int(H * BAR_RATIO);
+
+canvasRoll.width = W;
+canvasRoll.height = H - int(H * BAR_RATIO);
+
+function setCanvasSize() {
+    // TODO: Figure out how to do it in CSS
+    console.log("Resized");
+    canvasBar.style.width = window.innerWidth + "px";
+    canvasBar.style.height = int(window.innerHeight * BAR_RATIO) + "px";
+
+    canvasRoll.style.width = window.innerWidth + "px";
+    canvasRoll.style.height = (window.innerHeight - canvasBar.style.height) + "px";
+}
 
 function onMIDISuccess(midiAccess) {
     console.log(midiAccess);
@@ -52,22 +91,69 @@ function getMIDIMessage(midiMessage) {
     }
 }
 
+function HSVtoRGB(h, s, v) {
+    var r, g, b, i, f, p, q, t;
+    if (arguments.length === 1) {
+        s = h.s, v = h.v, h = h.h;
+    }
+    i = Math.floor(h * 6);
+    f = h * 6 - i;
+    p = v * (1 - s);
+    q = v * (1 - f * s);
+    t = v * (1 - (1 - f) * s);
+    switch (i % 6) {
+        case 0: r = v, g = t, b = p; break;
+        case 1: r = q, g = v, b = p; break;
+        case 2: r = p, g = v, b = t; break;
+        case 3: r = p, g = q, b = v; break;
+        case 4: r = t, g = p, b = v; break;
+        case 5: r = v, g = p, b = q; break;
+    }
+    return [
+        Math.round(r * 255),
+        Math.round(g * 255),
+        Math.round(b * 255)
+    ];
+}
+
+function get_color(note) {
+    var MAX_H = 0.4
+    var h = MAX_H - (MAX_H * note[1] / 127)
+    var s = 0.9
+    var l = 0
+    if (note[0]) l = 1;
+    if (l <= 0) {
+        return null;
+    }
+    return HSVtoRGB(h, s, l)
+}
+
+function get_on_color(count) {
+    var h = Math.max(0, 0.2 - count * 0.03)
+    var s = Math.min(1, 0.3 + 0.2 * count)
+    var l = Math.min(1, 0.4 + 0.2 * count)
+    return HSVtoRGB(h, s, l)
+}
+
 function draw() {
     tick++;
 
-    ctx.fillStyle = 'rgb(0, 0, 0)';
-    ctx.fillRect(0, 0, W, H);
+    cbar.fillStyle = 'rgb(0, 0, 0)';
+    cbar.fillRect(0, 0, W, H);
 
-    ctx.strokeStyle = 'rgb(255, 255, 255)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(10, tick);
-    ctx.lineTo(W - 10, tick);
-    ctx.closePath();
-    ctx.stroke();
+    // ctx.strokeStyle = 'rgb(255, 255, 255)';
+    // ctx.lineWidth = 1;
+    // ctx.beginPath();
+    // ctx.moveTo(10, tick);
+    // ctx.lineTo(W - 10, tick);
+    // ctx.closePath();
+    // ctx.stroke();
 
     requestAnimationFrame(draw)
 }
+
+setCanvasSize();
+$(window).resize(setCanvasSize);
 
 requestAnimationFrame(draw)
 
