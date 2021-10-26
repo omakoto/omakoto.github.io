@@ -41,7 +41,7 @@ var AH = BAR_H - VM;
 var MIN_NOTE = 21;
 var MAX_NOTE = 108;
 
-var ROLL_SPEED = 4;
+var ROLL_SPEED = 2 * int(scale);
 
 // Initialize notes
 var tick = 0;
@@ -68,6 +68,9 @@ canvasRoll.height = H - int(H * BAR_RATIO);
 croll.fillStyle = 'rgb(0, 0, 0)';
 croll.fillRect(0, 0, canvasRoll.width, canvasRoll.height);
 
+
+var MIDI_OUT = null;
+
 function setCanvasSize() {
     // TODO: Figure out how to do it in CSS
     console.log("Resized");
@@ -81,11 +84,17 @@ function setCanvasSize() {
 function onMIDISuccess(midiAccess) {
     console.log(midiAccess);
 
-    var inputs = midiAccess.inputs;
-
-    for (var input of inputs.values()) {
+    for (var input of midiAccess.inputs.values()) {
+        console.log(input);
         input.onmidimessage = getMIDIMessage;
     }
+    for (var output of midiAccess.outputs.values()) {
+        console.log(output);
+        if (!MIDI_OUT && !/through/i.test(output.name)) {
+            MIDI_OUT = output;
+        }
+    }
+    console.log("Output device selected:", MIDI_OUT);
 }
 
 function onMIDIFailure() {
@@ -166,17 +175,24 @@ function line(ctx, left, top, width, height) {
     ctx.stroke();
 }
 
+
+var start = Date.now();
+
 function draw() {
     tick++;
+    // if (tick % 60 == 0) {
+    //     var now = Date.now();
+    //     console.log(((now - start) / tick) + " ms");
+    // }
 
-    cbar.fillStyle = 'rgb(0, 0, 0)';
+    cbar.fillStyle = 'black';
     cbar.fillRect(0, 0, W, H);
 
     // bar width
     var bw = AW / (MAX_NOTE - MIN_NOTE + 1) - SPACING
 
     croll.drawImage(canvasRoll, 0, ROLL_SPEED);
-    croll.fillStyle = 'rgb(0,0,0)';
+    croll.fillStyle = 'black';
     croll.fillRect(0, 0, AW, ROLL_SPEED);
 
     if (onNoteCount > 0) {
