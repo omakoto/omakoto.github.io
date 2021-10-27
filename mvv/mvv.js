@@ -8,16 +8,16 @@ function int(v) {
 
 var scale = 1; // window.devicePixelRatio;
 
-var NOTES_COUNT = 128
+var NOTES_COUNT = 128;
 
-var BAR_RATIO = 0.3
+var BAR_RATIO = 0.3;
 
 var LINE_WIDTH = 2 * scale;
 
-var BASE_LINE_COLOR = [200, 255, 200]
+var BASE_LINE_COLOR = [200, 255, 200];
 
-var ROLL_SCROLL_TICKS = 1
-var ROLL_SCROLL_AMOUNT = 4
+var ROLL_SCROLL_TICKS = 1;
+var ROLL_SCROLL_AMOUNT = 2;
 
 var W = Math.floor(screen.width * scale);
 var H = Math.floor(screen.height * scale);
@@ -28,8 +28,6 @@ var ROLL_H = H - BAR_H;
 
 var MIN_NOTE = 21;
 var MAX_NOTE = 108;
-
-var ROLL_SPEED = 2 * int(scale);
 
 // Initialize notes
 var tick = 0;
@@ -132,15 +130,11 @@ function hsvToRgb(h, s, v) {
     ];
 }
 
-function getColor(note) {
+function getColor(velocity) {
     var MAX_H = 0.4
-    var h = MAX_H - (MAX_H * note[1] / 127)
-    var s = 0.9
-    var l = 0
-    if (note[0]) l = 1;
-    if (l <= 0) {
-        return null;
-    }
+    var h = MAX_H - (MAX_H * velocity / 127)
+    var s = 0.9;
+    var l = 1;
     return hsvToRgb(h, s, l)
 }
 
@@ -178,9 +172,9 @@ function draw() {
     // bar width
     var bw = W / (MAX_NOTE - MIN_NOTE + 1) - 1
 
-    croll.drawImage(canvasRoll, 0, ROLL_SPEED);
+    croll.drawImage(canvasRoll, 0, ROLL_SCROLL_AMOUNT);
     croll.fillStyle = 'black';
-    croll.fillRect(0, 0, W, ROLL_SPEED);
+    croll.fillRect(0, 0, W, ROLL_SCROLL_AMOUNT);
 
     if (onNoteCount > 0) {
         croll.fillStyle = toColorStr(getOnColor(onNoteCount));
@@ -188,28 +182,36 @@ function draw() {
         // croll(self.roll, self._get_on_color(self.on), (0, ROLL_SCROLL_AMOUNT - 1, aw, 1))
     }
 
+    cbar.fillStyle = toColorStr(getColor(127 * (1 - 0.25)));
+    cbar.fillRect(0, BAR_H * 0.25, W, LINE_WIDTH)
+
+    cbar.fillStyle = toColorStr(getColor(127 * (1 - 0.5)));
+    cbar.fillRect(0, BAR_H * 0.5, W, LINE_WIDTH)
+
+    cbar.fillStyle = toColorStr(getColor(127 * (1 - 0.7)));
+    cbar.fillRect(0, BAR_H * 0.7, W, LINE_WIDTH)
+
     for (var i = MIN_NOTE; i <= MAX_NOTE; i++) {
         var note = notes[i]
-        var color = getColor(note)
+        if (!note[0]) {
+            continue;
+        }
+        var color = getColor(note[1])
         if (color === null) continue
 
         // bar left
         var bl = W * (i - MIN_NOTE) / (MAX_NOTE - MIN_NOTE + 1)
 
         // bar height
-        var bh = BAR_H * note[1] / 127
+        var bh = BAR_H * note[1] / 127;
 
         cbar.fillStyle = toColorStr(color);
-        cbar.fillRect(bl, BAR_H - bh, bw, bh);
+        cbar.fillRect(bl, BAR_H, bw, -bh);
         // todo: draw roll bar
         // pg.draw.rect(self.roll, color, (bl, 0, bw, ROLL_SCROLL_AMOUNT))
         croll.fillStyle = cbar.fillStyle;
-        croll.fillRect(bl, 0, bw, ROLL_SPEED);
+        croll.fillRect(bl, 0, bw, ROLL_SCROLL_AMOUNT);
     }
-
-    // cbar.fillStyle = toColorStr(MID_LINE_COLOR);
-    // cbar.fillRect(0, BAR_H * 0.25, W, LINE_WIDTH)
-    // cbar.fillRect(0, BAR_H * 0.5, W, LINE_WIDTH)
 
     cbar.fillStyle = toColorStr(BASE_LINE_COLOR);
     cbar.fillRect(0, BAR_H - LINE_WIDTH, W, LINE_WIDTH)
