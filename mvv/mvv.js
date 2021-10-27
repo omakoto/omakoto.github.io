@@ -6,37 +6,25 @@ function int(v) {
     return Math.floor(v);
 }
 
+var scale = 1; // window.devicePixelRatio;
+
 var NOTES_COUNT = 128
 
-var HORIZONTAL_MARGIN = 0.01  // Margin at each side
-var VERTICAL_MARGIN = 0.01  // Margin at top and bottom
-var SPACING = 0.01 // Space between each bar
-
-var LINE_WIDTH = 4
-
-var MID_LINE_COLOR = [200, 200, 255]
-var BASE_LINE_COLOR = [200, 255, 200]
-
 var BAR_RATIO = 0.3
+
+var LINE_WIDTH = 2 * scale;
+
+var BASE_LINE_COLOR = [200, 255, 200]
 
 var ROLL_SCROLL_TICKS = 1
 var ROLL_SCROLL_AMOUNT = 4
 
-var scale = window.devicePixelRatio;
 var W = Math.floor(screen.width * scale);
 var H = Math.floor(screen.height * scale);
-
-// TODO: Do the margin in CSS
-var HM = int(W * HORIZONTAL_MARGIN); // h-margin
-var VM = int(H * VERTICAL_MARGIN); // v-margin
 
 var BAR_H = int(H * BAR_RATIO);
 var ROLL_H = H - BAR_H;
 
-
-// Available width / height, for the bar
-var AW = W - HM * 2;
-var AH = BAR_H - VM;
 
 var MIN_NOTE = 21;
 var MAX_NOTE = 108;
@@ -74,11 +62,11 @@ var MIDI_OUT = null;
 function setCanvasSize() {
     // TODO: Figure out how to do it in CSS
     console.log("Resized");
-    canvasBar.style.width = window.innerWidth + "px";
-    canvasBar.style.height = int(window.innerHeight * BAR_RATIO) + "px";
+    // canvasBar.style.width = window.innerWidth + "px";
+    // canvasBar.style.height = int(window.innerHeight * BAR_RATIO) + "px";
 
-    canvasRoll.style.width = window.innerWidth + "px";
-    canvasRoll.style.height = (window.innerHeight - canvasBar.style.height) + "px";
+    // canvasRoll.style.width = window.innerWidth + "px";
+    // canvasRoll.style.height = (window.innerHeight - canvasBar.style.height) + "px";
 }
 
 function onMIDISuccess(midiAccess) {
@@ -175,7 +163,6 @@ function line(ctx, left, top, width, height) {
     ctx.stroke();
 }
 
-
 var start = Date.now();
 
 function draw() {
@@ -189,15 +176,15 @@ function draw() {
     cbar.fillRect(0, 0, W, H);
 
     // bar width
-    var bw = AW / (MAX_NOTE - MIN_NOTE + 1) - SPACING
+    var bw = W / (MAX_NOTE - MIN_NOTE + 1) - 1
 
     croll.drawImage(canvasRoll, 0, ROLL_SPEED);
     croll.fillStyle = 'black';
-    croll.fillRect(0, 0, AW, ROLL_SPEED);
+    croll.fillRect(0, 0, W, ROLL_SPEED);
 
     if (onNoteCount > 0) {
         croll.fillStyle = toColorStr(getOnColor(onNoteCount));
-        croll.fillRect(0, ROLL_SCROLL_AMOUNT - 2, AW, 2);
+        croll.fillRect(0, ROLL_SCROLL_AMOUNT - 1, W, 1);
         // croll(self.roll, self._get_on_color(self.on), (0, ROLL_SCROLL_AMOUNT - 1, aw, 1))
     }
 
@@ -207,25 +194,25 @@ function draw() {
         if (color === null) continue
 
         // bar left
-        var bl = HM + AW * (i - MIN_NOTE) / (MAX_NOTE - MIN_NOTE + 1)
+        var bl = W * (i - MIN_NOTE) / (MAX_NOTE - MIN_NOTE + 1)
 
         // bar height
-        var bh = AH * note[1] / 127
+        var bh = BAR_H * note[1] / 127
 
         cbar.fillStyle = toColorStr(color);
-        cbar.fillRect(bl, VM + AH - bh, bw, bh);
+        cbar.fillRect(bl, BAR_H - bh, bw, bh);
         // todo: draw roll bar
         // pg.draw.rect(self.roll, color, (bl, 0, bw, ROLL_SCROLL_AMOUNT))
         croll.fillStyle = cbar.fillStyle;
         croll.fillRect(bl, 0, bw, ROLL_SPEED);
     }
 
-    cbar.fillStyle = toColorStr(MID_LINE_COLOR);
-    cbar.fillRect(HM, VM + AH * 0.25, AW, LINE_WIDTH)
-    cbar.fillRect(HM, VM + AH * 0.5, AW, LINE_WIDTH)
+    // cbar.fillStyle = toColorStr(MID_LINE_COLOR);
+    // cbar.fillRect(0, BAR_H * 0.25, W, LINE_WIDTH)
+    // cbar.fillRect(0, BAR_H * 0.5, W, LINE_WIDTH)
 
     cbar.fillStyle = toColorStr(BASE_LINE_COLOR);
-    cbar.fillRect(HM, VM + AH - LINE_WIDTH, AW, LINE_WIDTH)
+    cbar.fillRect(0, BAR_H - LINE_WIDTH, W, LINE_WIDTH)
 
 
 
