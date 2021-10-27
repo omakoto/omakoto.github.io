@@ -105,6 +105,33 @@ function getMIDIMessage(midiMessage) {
     }
 }
 
+class Recorder {
+    constructor() {
+        this._playing = false;
+        this._recording = false;
+    }
+}
+
+var recorder = new Recorder();
+
+function keyDown(ev) {
+    // console.log("keydown", ev.originalEvent.key);
+
+    var handled = false;
+    if (ev.originalEvent.key == 'F1') {
+        $('#canvases').toggle();
+        console.log("Video mute toggle");
+        handled = true;
+    } else if (ev.originalEvent.key == 'r') {
+        $('#recording').toggle();
+    } else if (ev.originalEvent.key == ' ') {
+        $('#playing').toggle();
+    }
+    if (handled) {
+        ev.preventDefault();
+    }
+}
+
 function hsvToRgb(h, s, v) {
     var r, g, b, i, f, p, q, t;
     if (arguments.length === 1) {
@@ -166,15 +193,17 @@ function draw() {
     //     console.log(((now - start) / tick) + " ms");
     // }
 
+    // Scroll the roll
+    croll.drawImage(canvasRoll, 0, ROLL_SCROLL_AMOUNT);
+    croll.fillStyle = 'black';
+    croll.fillRect(0, 0, W, ROLL_SCROLL_AMOUNT);
+
     cbar.fillStyle = 'black';
     cbar.fillRect(0, 0, W, H);
 
     // bar width
     var bw = W / (MAX_NOTE - MIN_NOTE + 1) - 1
 
-    croll.drawImage(canvasRoll, 0, ROLL_SCROLL_AMOUNT);
-    croll.fillStyle = 'black';
-    croll.fillRect(0, 0, W, ROLL_SCROLL_AMOUNT);
 
     if (onNoteCount > 0) {
         croll.fillStyle = toColorStr(getOnColor(onNoteCount));
@@ -216,22 +245,14 @@ function draw() {
     cbar.fillStyle = toColorStr(BASE_LINE_COLOR);
     cbar.fillRect(0, BAR_H - LINE_WIDTH, W, LINE_WIDTH)
 
-
-
-    // ctx.strokeStyle = 'rgb(255, 255, 255)';
-    // ctx.lineWidth = 1;
-    // ctx.beginPath();
-    // ctx.moveTo(10, tick);
-    // ctx.lineTo(W - 10, tick);
-    // ctx.closePath();
-    // ctx.stroke();
-
     onNoteCount = 0;
     requestAnimationFrame(draw)
 }
 
-setCanvasSize();
-$(window).resize(setCanvasSize);
+// setCanvasSize();
+// $(window).resize(setCanvasSize);
+
+$(window).keydown(keyDown);
 
 requestAnimationFrame(draw)
 
