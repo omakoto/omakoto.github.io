@@ -229,7 +229,7 @@ class MidiInputHandler {
         this.#onNoteCount = 0;
     }
 
-    onDraw(now) {
+    afterDraw(now) {
         this.#onNoteCount = 0;
     }
 
@@ -249,7 +249,7 @@ class MidiInputHandler {
 const midiInputHandler = new MidiInputHandler();
 
 class MidiOutputHandler {
-    #device;
+    #device = null;
     constructor() {
     }
 
@@ -262,7 +262,9 @@ class MidiOutputHandler {
         if (!this.#device) {
             return;
         }
-        this.#device.clear();
+        if (this.#device.clear) {
+            this.#device.clear(); // Chrome doesn't support it yet.
+        }
         this.#device.send([176, 123, 0], 0); // All notes off
         this.#device.send([176, 121, 0], 0); // Reset all controllers
         this.#device.send([255], 0); // All reset
@@ -277,6 +279,8 @@ class Recorder {
     #isRecording = false;
 
     #recordingStartTimestamp = 0;
+    #playbackStartTimestamp = 0;
+    #playbackTimeAdjustment = 0;
     #nextPlaybackIndex = 0;
 
     constructor() {
@@ -326,7 +330,7 @@ class Recorder {
         return this.#isPlaying;
     }
 
-    #startRecording() {
+    #startRecording(now) {
         info("Recording started");
         this.#isRecording = true;
     }
@@ -336,9 +340,11 @@ class Recorder {
         this.#isRecording = false;
     }
 
-    #startPlaying() {
+    #startPlaying(now) {
         info("Playback started");
         this.#isPlaying = true;
+        this.#playbackStartTimestamp = window.performance.now();
+        this.#playbackTimeAdjustment = 0;
         this.#nextPlaybackIndex = 0;
     }
 
@@ -351,6 +357,17 @@ class Recorder {
         if (!this.#isRecording) {
             return false;
         }
+
+        // Only record certain events.
+        switch (ev.data[0]) {
+            case 144: // Note on
+            case 128: // Note off
+            case 176: // Control
+                break;
+            default:
+                return false;
+        }
+
         if (this.#events.length == 0) {
             // First event, remember the timestamp.
             this.#recordingStartTimestamp = ev.timeStamp;
@@ -361,9 +378,20 @@ class Recorder {
         return true;
     }
 
-    fetchNextEvent(timeStamp) {
+    // Fastfoward or rewind.
+    movePlaybackPosition(milliseconds) {
+        this.#playbackTimeAdjustment += milliseconds;
+        if (this.#playbackTimeAdjustment < 0) {
+            this.#playbackTimeAdjustment = 0;
+        }
     }
 
+    playback() {
+        if (!this.#isPlaying) {
+            return false;
+        }
+        return true;
+    }
 }
 
 const recorder = new Recorder();
@@ -380,7 +408,7 @@ class Coordinator {
     }
 
     onKeyDown(ev) {
-        debug("onKeyDown", ev.timeStamp, ev.which, ev);
+        info("onKeyDown", ev.timeStamp, ev.which, ev);
 
         // Don't respond if any modifier keys are pressed.
         if (ev.ctrlKey || ev.shiftKey || ev.altKey || ev.metaKey) {
@@ -399,6 +427,16 @@ class Coordinator {
                 break;
             case 32: // Space
                 this.togglePlayback();
+                break;
+            case 37: // Left
+                if (recorder.isPlaying) {
+                    recorder.movePlaybackPosition(-1000);
+                }
+                break;
+            case 39: // Right
+                if (recorder.isPlaying) {
+                    recorder.movePlaybackPosition(1000);
+                }
                 break;
             default:
                 return;
@@ -461,7 +499,11 @@ class Coordinator {
     onMidiMessage(ev) {
         debug("onMidiMessage", ev.timeStamp, ev.data[0], ev.data[1], ev.data[2],  ev);
         this.#normalizeMidiEvent(ev);
+
         midiInputHandler.onMidiMessage(ev);
+        if (recorder.isRecording) {
+            recorder.recordEvent(ev);
+        }
     }
 
     resetMidi() {
@@ -470,6 +512,7 @@ class Coordinator {
     }
 
     onDraw() {
+        // Update FPS
         this.#frames++;
         var now = window.performance.now();
         if (now >= this.#nextSecond) {
@@ -480,8 +523,12 @@ class Coordinator {
 
         this.#now = now;
 
+        if (recorder.isPlaying) {
+            recorder.playback();
+        }
         renderer.onDraw(this.#now);
-        midiInputHandler.onDraw(this.#now); // This has to be called after renderer.
+        midiInputHandler.afterDraw(this.#now);
+
         Coordinator.scheduleOnDraw();
     }
 
