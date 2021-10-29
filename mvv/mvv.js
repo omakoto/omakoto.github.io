@@ -273,6 +273,13 @@ class MidiOutputHandler {
 
 const midiOutputHandler = new MidiOutputHandler();
 
+class RecordedEvent {
+    constructor(relativeTimeStamp, ev) {
+        this.relativeTimeStamp = relativeTimeStamp;
+        this.event = ev;
+    }
+}
+
 class Recorder {
     #events = [];
     #isPlaying = false;
@@ -291,7 +298,7 @@ class Recorder {
             return false;
         }
         if (this.#isPlaying) {
-            this.stopPlaying();
+            return false;
         }
         this.#startRecording();
     }
@@ -330,9 +337,10 @@ class Recorder {
         return this.#isPlaying;
     }
 
-    #startRecording(now) {
+    #startRecording() {
         info("Recording started");
         this.#isRecording = true;
+        this.#events = [];
     }
 
     #stopRecording() {
@@ -340,7 +348,7 @@ class Recorder {
         this.#isRecording = false;
     }
 
-    #startPlaying(now) {
+    #startPlaying() {
         info("Playback started");
         this.#isPlaying = true;
         this.#playbackStartTimestamp = window.performance.now();
@@ -372,25 +380,68 @@ class Recorder {
             // First event, remember the timestamp.
             this.#recordingStartTimestamp = ev.timeStamp;
         }
-        ev.timeStamp -= this.#recordingStartTimestamp;
-        this.#events.push(ev);
+        this.#events.push(new RecordedEvent(ev.timeStamp - this.#recordingStartTimestamp, ev));
 
         return true;
     }
 
     // Fastfoward or rewind.
-    movePlaybackPosition(milliseconds) {
+    adjustPlaybackPosition(milliseconds) {
         this.#playbackTimeAdjustment += milliseconds;
-        if (this.#playbackTimeAdjustment < 0) {
+        var ts = this.#getCurrentPlaybackTimestamp();
+        // If rewound beyond the starting point, just reset the
+        if (ts <= 0) {
+            this.#playbackStartTimestamp = window.performance.now();
             this.#playbackTimeAdjustment = 0;
+            ts = 0;
+            this.#nextPlaybackIndex = 0;
         }
+        info("New playback timestamp: " + ts);
+        if (ts == 0) {
+            return;
+        }
+
+        // Find the next play event index.
+        this.#nextPlaybackIndex = 0;
+        this.#moveUpToTimestamp(ts, null);
+    }
+
+    #getCurrentPlaybackTimestamp() {
+        return (window.performance.now() - this.#playbackStartTimestamp) + this.#playbackTimeAdjustment;
     }
 
     playback() {
         if (!this.#isPlaying) {
             return false;
         }
-        return true;
+
+        // Current timestamp
+        var ts = this.#getCurrentPlaybackTimestamp();
+
+        return this.#moveUpToTimestamp(ts, function(ev) {
+            midiInputHandler.onMidiMessage(ev);
+            // TODO Play back the event, with the right timestamp
+        });
+    }
+
+    #moveUpToTimestamp(timestamp, callback) {
+        for (;;) {
+            if (this.#events.length <= this.#nextPlaybackIndex) {
+                // No more events.
+                this.#isPlaying = false;
+                coordinator.onPlaybackFinished();
+                return false;
+            }
+            var ev = this.#events[this.#nextPlaybackIndex];
+            if (ev.relativeTimeStamp > timestamp) {
+                return true;
+            }
+            this.#nextPlaybackIndex++;
+
+            if (callback) {
+                callback(ev.event);
+            }
+        }
     }
 }
 
@@ -430,12 +481,14 @@ class Coordinator {
                 break;
             case 37: // Left
                 if (recorder.isPlaying) {
-                    recorder.movePlaybackPosition(-1000);
+                    this.resetMidi();
+                    recorder.adjustPlaybackPosition(-1000);
                 }
                 break;
             case 39: // Right
                 if (recorder.isPlaying) {
-                    recorder.movePlaybackPosition(1000);
+                    this.resetMidi();
+                    recorder.adjustPlaybackPosition(1000);
                 }
                 break;
             default:
@@ -469,6 +522,7 @@ class Coordinator {
     }
 
     onPlaybackFinished() {
+        info("Playback finished");
         this.#updateRecorderStatus();
         this.resetMidi();
     }
