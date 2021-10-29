@@ -3,7 +3,7 @@
 // and window.screen.{width,height{
 
 
-const DEBUG = true;
+const DEBUG = parseInt((new URLSearchParams(window.location.search)).get("debug")) ? true : false;
 const SCALE = 2; // window.devicePixelRatio;
 const NOTES_COUNT = 128;
 const BAR_RATIO = 0.3; // Keep it consistent with #canvas#bar height.
@@ -208,14 +208,14 @@ class MidiInputHandler {
 
     onMidiMessage(ev) {
         var d = ev.data;
+
         if (d[0] == 144) { // Note on
             this.#onNoteCount++;
             this.#notes[d[1]][0] = true;
             this.#notes[d[1]][1] = d[2];
         } else if (d[0] == 128) { // Note off
             this.#notes[d[1]][0] = false;
-        } else if (d[0] == 176 && (d[1] == 64 || d[1] == 20)) { // Pedal
-            // Pedal's control number is 64, but we also use so that V25's leftmost knob can be used.
+        } else if (d[0] == 176 && d[1] == 64) { // Pedal
             this.#pedal = d[2];
         }
     }
@@ -276,6 +276,7 @@ class Recorder {
     #isPlaying = false;
     #isRecording = false;
 
+    #recordingStartTimestamp = 0;
     #nextPlaybackIndex = 0;
 
     constructor() {
@@ -338,11 +339,29 @@ class Recorder {
     #startPlaying() {
         info("Playback started");
         this.#isPlaying = true;
+        this.#nextPlaybackIndex = 0;
     }
 
     #stopPlaying() {
         info("Playback stopped");
         this.#isPlaying = false;
+    }
+
+    recordEvent(ev) {
+        if (!this.#isRecording) {
+            return false;
+        }
+        if (this.#events.length == 0) {
+            // First event, remember the timestamp.
+            this.#recordingStartTimestamp = ev.timeStamp;
+        }
+        ev.timeStamp -= this.#recordingStartTimestamp;
+        this.#events.push(ev);
+
+        return true;
+    }
+
+    fetchNextEvent(timeStamp) {
     }
 
 }
@@ -429,8 +448,19 @@ class Coordinator {
         }
     }
 
+    #normalizeMidiEvent(ev) {
+        // Allow V25's leftmost knob to be used as the pedal.
+        if (ev.currentTarget.name.startsWith("V25")) {
+            var d = ev.data;
+            if (d[0] == 176 && d[1] == 20) {
+                d[1] = 64;
+            }
+        }
+    }
+
     onMidiMessage(ev) {
         debug("onMidiMessage", ev.timeStamp, ev.data[0], ev.data[1], ev.data[2],  ev);
+        this.#normalizeMidiEvent(ev);
         midiInputHandler.onMidiMessage(ev);
     }
 
