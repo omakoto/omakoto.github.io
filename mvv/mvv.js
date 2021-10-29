@@ -455,6 +455,7 @@ class Coordinator {
     #now = 0;
     #nextSecond = 0;
     #frames = 0;
+    #timerTicks = 0;
     #efps;
 
     constructor() {
@@ -574,16 +575,14 @@ class Coordinator {
         this.#frames++;
         var now = window.performance.now();
         if (now >= this.#nextSecond) {
-            this.#efps.text(this.#frames);
+            this.#efps.text(this.#frames + "/" + this.#timerTicks);
             this.#frames = 0;
+            this.#timerTicks = 0;
             this.#nextSecond += 1000;
         }
 
         this.#now = now;
 
-        if (recorder.isPlaying) {
-            recorder.playback();
-        }
         renderer.onDraw(this.#now);
         midiRenderingStatus.afterDraw(this.#now);
 
@@ -592,6 +591,13 @@ class Coordinator {
 
     static scheduleOnDraw() {
         requestAnimationFrame(function() {coordinator.onDraw();})
+    }
+
+    onTimer() {
+        this.#timerTicks++;
+        if (recorder.isPlaying) {
+            recorder.playback();
+        }
     }
 }
 
@@ -616,6 +622,7 @@ function onMIDIFailure() {
     alert('Could not access your MIDI devices.');
 }
 
+setInterval(function() {coordinator.onTimer();}, 5);
 Coordinator.scheduleOnDraw();
 navigator.requestMIDIAccess()
     .then(onMIDISuccess, onMIDIFailure);
