@@ -143,7 +143,7 @@ class Renderer {
 
         // Scroll the roll.
         this.#roll.drawImage(this.#croll, 0, this.#ROLL_SCROLL_AMOUNT);
-        this.#roll.fillStyle = rgbToStr(this.getPedalColor(midiInputHandler.pedal));
+        this.#roll.fillStyle = rgbToStr(this.getPedalColor(midiRenderingStatus.pedal));
         this.#roll.fillRect(0, 0, this.#W, this.#ROLL_SCROLL_AMOUNT);
 
         // Clear the bar area.
@@ -154,8 +154,8 @@ class Renderer {
         var bw = this.#W / (this.#MAX_NOTE - this.#MIN_NOTE + 1) - 1;
 
         // "On" line
-        if (midiInputHandler.onNoteCount > 0) {
-            this.#roll.fillStyle = rgbToStr(this.getOnColor(midiInputHandler.onNoteCount));
+        if (midiRenderingStatus.onNoteCount > 0) {
+            this.#roll.fillStyle = rgbToStr(this.getOnColor(midiRenderingStatus.onNoteCount));
             this.#roll.fillRect(0, this.#ROLL_SCROLL_AMOUNT - s(1), this.#W, s(1));
         }
 
@@ -165,7 +165,7 @@ class Renderer {
         this.drawSubLine(0.7);
 
         for (var i = this.#MIN_NOTE; i <= this.#MAX_NOTE; i++) {
-            var note = midiInputHandler.getNote(i);
+            var note = midiRenderingStatus.getNote(i);
             if (!note[0]) {
                 continue;
             }
@@ -197,7 +197,7 @@ class Renderer {
 
 const renderer = new Renderer();
 
-class MidiInputHandler {
+class MidiRenderingStatus {
     #notes;
     #pedal = 0;
     #onNoteCount = 0;
@@ -246,9 +246,9 @@ class MidiInputHandler {
     }
 }
 
-const midiInputHandler = new MidiInputHandler();
+const midiRenderingStatus = new MidiRenderingStatus();
 
-class MidiOutputHandler {
+class MidiOutputManager {
     #device = null;
     constructor() {
     }
@@ -271,7 +271,7 @@ class MidiOutputHandler {
     }
 }
 
-const midiOutputHandler = new MidiOutputHandler();
+const midiOutputManager = new MidiOutputManager();
 
 class RecordedEvent {
     constructor(relativeTimeStamp, ev) {
@@ -419,7 +419,7 @@ class Recorder {
         var ts = this.#getCurrentPlaybackTimestamp();
 
         return this.#moveUpToTimestamp(ts, function(ev) {
-            midiInputHandler.onMidiMessage(ev);
+            midiRenderingStatus.onMidiMessage(ev);
             // TODO Play back the event, with the right timestamp
         });
     }
@@ -554,15 +554,15 @@ class Coordinator {
         debug("onMidiMessage", ev.timeStamp, ev.data[0], ev.data[1], ev.data[2],  ev);
         this.#normalizeMidiEvent(ev);
 
-        midiInputHandler.onMidiMessage(ev);
+        midiRenderingStatus.onMidiMessage(ev);
         if (recorder.isRecording) {
             recorder.recordEvent(ev);
         }
     }
 
     resetMidi() {
-        midiInputHandler.reset();
-        midiOutputHandler.reset();
+        midiRenderingStatus.reset();
+        midiOutputManager.reset();
     }
 
     onDraw() {
@@ -581,7 +581,7 @@ class Coordinator {
             recorder.playback();
         }
         renderer.onDraw(this.#now);
-        midiInputHandler.afterDraw(this.#now);
+        midiRenderingStatus.afterDraw(this.#now);
 
         Coordinator.scheduleOnDraw();
     }
@@ -603,7 +603,7 @@ function onMIDISuccess(midiAccess) {
     for (var output of midiAccess.outputs.values()) {
         console.log("Output: ", output);
         if (!/midi through/i.test(output.name)) {
-            midiOutputHandler.setMidiOut(output);
+            midiOutputManager.setMidiOut(output);
         }
     }
 }
