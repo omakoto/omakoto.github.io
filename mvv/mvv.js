@@ -63,6 +63,9 @@ function toColorStr(rgb) {
 class Renderer {
     constructor() {
     }
+
+    onDraw(now) {
+    }
 }
 
 const renderer = new Renderer();
@@ -98,7 +101,7 @@ class MidiInputHandler {
         this.#onNoteCount = 0;
     }
 
-    onDraw() {
+    onDraw(now) {
         this.#onNoteCount = 0;
     }
 
@@ -144,18 +147,33 @@ class Recorder {
 const recorder = new Recorder();
 
 class Coordinator {
+    #now = 0;
+
     onKeyDown(ev) {
         debug("onKeyDown", ev);
     }
 
-    onMidiMessage(m) {
-        debug("onMidiMessage", m.data[0], m.data[1], m.data[2],  m);
-        midiInputHandler.onMidiMessage(m);
+    onMidiMessage(ev) {
+        debug("onMidiMessage", ev.data[0], ev.data[1], ev.data[2],  ev);
+        midiInputHandler.onMidiMessage(ev);
     }
 
     resetMidi() {
         midiInputHandler.reset();
         midiOutputHandler.reset();
+    }
+
+    onDraw() {
+        // debug(this);
+        this.#now = window.performance.now();
+
+        renderer.onDraw(this.#now);
+        midiInputHandler.onDraw(this.#now);
+        Coordinator.scheduleOnDraw();
+    }
+
+    static scheduleOnDraw() {
+        requestAnimationFrame(function() {coordinator.onDraw();})
     }
 }
 
@@ -166,7 +184,7 @@ function onMIDISuccess(midiAccess) {
 
     for (var input of midiAccess.inputs.values()) {
         console.log("Input: ", input);
-        input.onmidimessage = coordinator.onMidiMessage;
+        input.onmidimessage = function(ev) {coordinator.onMidiMessage(ev); };
     }
     for (var output of midiAccess.outputs.values()) {
         console.log("Output: ", output);
@@ -180,10 +198,10 @@ function onMIDIFailure() {
     alert('Could not access your MIDI devices.');
 }
 
+Coordinator.scheduleOnDraw();
 navigator.requestMIDIAccess()
     .then(onMIDISuccess, onMIDIFailure);
-$(window).keydown(coordinator.onKeyDown);
-
+$(window).keydown(function(ev) {coordinator.onKeyDown(ev);});
 
 
 // var BAR_RATIO = 0.3;
