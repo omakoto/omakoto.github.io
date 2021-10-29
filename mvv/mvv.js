@@ -6,19 +6,20 @@ function int(v) {
     return Math.floor(v);
 }
 
+const DEBUG = true;
 const SCALE = 1; // window.devicePixelRatio;
 const NOTES_COUNT = 128;
 
-class Recorder {
-    constructor() {
-    }
+const PEDAL_CONTROL = 20; // 64 ; is the real number, but to use V25's leftmost knob, which is 20.
 
-    setMidiOut(device) {
-        console.log("MIDI output device set:", device);
-    }
+function debug(...args) {
+    if (!DEBUG) return;
+    console.log(...args);
 }
 
-const recorder = new Recorder();
+function info(...args) {
+    console.log(...args);
+}
 
 class Renderer {
     constructor() {
@@ -27,22 +28,17 @@ class Renderer {
 
 const renderer = new Renderer();
 
-class MidiInputReader {
+class MidiInputHandler {
     #notes;
     #pedal = 0;
     #onNoteCount = 0;
 
     constructor() {
-        this.#notes = [];
-        for (var i = 0; i < NOTES_COUNT; i++) {
-            this.#notes[i] = [false, 0, 0]; // note on/off, velocity, tick
-        }
-        this.#pedal = 0;
-        this.#onNoteCount = 0;
+        this.reset();
     }
 
-    onMidiMessage(m) {
-        var d = midiMessage.data;
+    onMidiMessage(ev) {
+        var d = ev.data;
         if (d[0] == 144) { // Note on
             this.#onNoteCount++;
             this.#notes[d[1]][0] = true;
@@ -51,7 +47,18 @@ class MidiInputReader {
         } else if (d[0] == 128) { // Note off
             this.#notes[d[1]][0] = false;
             this.#notes[d[1]][3] = tick;
+        } else if (d[0] == 176 && d[1] == PEDAL_CONTROL) { // Pedal
+            this.#pedal = d[2];
         }
+    }
+
+    reset() {
+        this.#notes = [];
+        for (var i = 0; i < NOTES_COUNT; i++) {
+            this.#notes[i] = [false, 0, 0]; // note on/off, velocity, tick
+        }
+        this.#pedal = 0;
+        this.#onNoteCount = 0;
     }
 
     onDraw() {
@@ -67,15 +74,51 @@ class MidiInputReader {
     }
 }
 
-const midiInputReader = new MidiInputReader();
+const midiInputHandler = new MidiInputHandler();
+
+class MidiOutputHandler {
+    #device;
+    constructor() {
+    }
+
+    setMidiOut(device) {
+        console.log("MIDI output device set:", device);
+        this.#device = device;
+    }
+
+    reset() {
+        if (!this.#device) {
+            return;
+        }
+        this.#device.clear();
+        this.#device.send([176, 123, 0], 0); // All notes off
+        this.#device.send([176, 121, 0], 0); // Reset all controllers
+        this.#device.send([255], 0); // All reset
+    }
+}
+
+const midiOutputHandler = new MidiOutputHandler();
+
+class Recorder {
+    constructor() {
+    }
+}
+
+const recorder = new Recorder();
 
 class Coordinator {
     onKeyDown(ev) {
-        console.log("onKeyDown", ev);
+        debug("onKeyDown", ev);
     }
 
     onMidiMessage(m) {
-        console.log("onMidiMessage", m);
+        debug("onMidiMessage", m.data[0], m.data[1], m.data[2],  m);
+        midiInputHandler.onMidiMessage(m);
+    }
+
+    resetMidi() {
+        midiInputHandler.reset();
+        midiOutputHandler.reset();
     }
 }
 
@@ -91,7 +134,7 @@ function onMIDISuccess(midiAccess) {
     for (var output of midiAccess.outputs.values()) {
         console.log("Output: ", output);
         if (!/midi through/i.test(output.name)) {
-            recorder.setMidiOut(output);
+            midiOutputHandler.setMidiOut(output);
         }
     }
 }
@@ -102,6 +145,7 @@ function onMIDIFailure() {
 
 navigator.requestMIDIAccess()
     .then(onMIDISuccess, onMIDIFailure);
+$(window).keydown(coordinator.onKeyDown);
 
 
 
