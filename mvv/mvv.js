@@ -277,6 +277,8 @@ class Recorder {
     #isPlaying = false;
     #isRecording = false;
 
+    #nextPlaybackIndex = 0;
+
     constructor() {
     }
 
@@ -287,16 +289,14 @@ class Recorder {
         if (this.#isPlaying) {
             this.stopPlaying();
         }
-        info("Recording started");
-        this.#isRecording = true;
+        this.#startRecording();
     }
 
     stopRecording() {
         if (!this.#isRecording) {
             return false;
         }
-        info("Recording stopped");
-        this.#isRecording = false;
+        this.#stopRecording();
         return true;
     }
 
@@ -307,16 +307,14 @@ class Recorder {
         if (this.#isPlaying) {
             return false;
         }
-        info("Playback started");
-        this.#isPlaying = true;
+        this.#startPlaying();
     }
 
     stopPlaying() {
         if (!this.#isPlaying) {
             return false;
         }
-        info("Playback stopped");
-        this.#isPlaying = false;
+        this.#stopPlaying();
         return true;
     }
 
@@ -327,6 +325,27 @@ class Recorder {
     get isPlaying() {
         return this.#isPlaying;
     }
+
+    #startRecording() {
+        info("Recording started");
+        this.#isRecording = true;
+    }
+
+    #stopRecording() {
+        info("Recording stopped");
+        this.#isRecording = false;
+    }
+
+    #startPlaying() {
+        info("Playback started");
+        this.#isPlaying = true;
+    }
+
+    #stopPlaying() {
+        info("Playback stopped");
+        this.#isPlaying = false;
+    }
+
 }
 
 const recorder = new Recorder();
@@ -363,23 +382,25 @@ class Coordinator {
         } else {
             recorder.startRecording();
         }
-        this.updateRecorderStatus();
+        this.#updateRecorderStatus();
     }
 
     togglePlayback() {
         if (recorder.isPlaying) {
             recorder.stopPlaying();
+            this.resetMidi();
         } else {
             recorder.startPlaying();
         }
-        this.updateRecorderStatus();
+        this.#updateRecorderStatus();
     }
 
     onPlaybackFinished() {
-        updateRecorderStatus();
+        this.#updateRecorderStatus();
+        this.resetMidi();
     }
 
-    updateRecorderStatus() {
+    #updateRecorderStatus() {
         if (recorder.isPlaying) {
             $('#playing').show();
         } else {
