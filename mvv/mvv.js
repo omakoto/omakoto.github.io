@@ -355,6 +355,13 @@ class Coordinator {
 
     onKeyDown(ev) {
         debug("onKeyDown", ev.timeStamp, ev.which, ev);
+        ev.preventDefault(); // Let's just disable all the keyboard shortcuts to avoid accidentally reloading the page.
+
+        // Don't respond if any modifier keys are pressed.
+        if (ev.ctrlKey || ev.shiftKey || ev.altKey || ev.metaKey) {
+            return;
+        }
+
         switch (ev.which) {
             case 112: // F1
                 this.toggleVideoMute();
@@ -365,10 +372,7 @@ class Coordinator {
             case 32: // Space
                 this.togglePlayback();
                 break;
-            default:
-                return;
         }
-        ev.preventDefault();
     }
 
     toggleVideoMute() {
