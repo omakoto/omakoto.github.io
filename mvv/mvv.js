@@ -4,10 +4,14 @@
 
 
 const DEBUG = parseInt((new URLSearchParams(window.location.search)).get("debug")) ? true : false;
-const SCALE = Math.floor(window.devicePixelRatio);
+const SCALE = window.devicePixelRatio;
 const NOTES_COUNT = 128;
-const BAR_RATIO = 0.3; // Keep it consistent with #canvas#bar height.
 
+// We set some styles in JS.
+const BAR_RATIO = 0.3; // Bar : Roll height
+const MARGIN = 0.005; // Margin at each side
+
+// Common values
 const RGB_BLACK = [0, 0, 0];
 
 // Utility functions
@@ -86,8 +90,14 @@ class Renderer {
     #frameCount = 0;
 
     constructor() {
-        this.#W = s(screen.width);
-        this.#H = s(screen.height);
+        // Adjust CSS with the constants.
+        $("body").css("padding", (MARGIN * 100) + "%");
+        $("#canvases").css("width", (100 - MARGIN * 200) + "%");
+        $("#bar").css("height", (BAR_RATIO * 100) + "%");
+        $("#roll").css("height", (100 - BAR_RATIO * 100) + "%");
+
+        this.#W = s(screen.width * (1 - MARGIN * 2));
+        this.#H = s(screen.height * (1 - MARGIN * 2));
         this.#BAR_H = int(this.#H * BAR_RATIO);
         this.#ROLL_H = this.#H - this.#BAR_H;
 
@@ -156,7 +166,7 @@ class Renderer {
         // "On" line
         if (midiRenderingStatus.onNoteCount > 0) {
             this.#roll.fillStyle = rgbToStr(this.getOnColor(midiRenderingStatus.onNoteCount));
-            this.#roll.fillRect(0, this.#ROLL_SCROLL_AMOUNT - s(1), this.#W, s(1));
+            this.#roll.fillRect(0, this.#ROLL_SCROLL_AMOUNT - s(2), this.#W, s(2));
         }
 
         // Sub lines.
@@ -635,8 +645,10 @@ navigator.requestMIDIAccess()
     .then(onMIDISuccess, onMIDIFailure);
 $(window).keydown(function(ev) {coordinator.onKeyDown(ev);});
 
-$(window).on('beforeunload', function(){ return 'Are you sure you want to leave?'; });
-$(window).unload(function() {
+$(window).on('beforeunload', function(){
+    return 'Are you sure you want to leave?';
+});
+$(window).on('unload', function() {
     coordinator.close();
 });
 
