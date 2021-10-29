@@ -393,13 +393,9 @@ class Recorder {
         if (ts <= 0) {
             this.#playbackStartTimestamp = window.performance.now();
             this.#playbackTimeAdjustment = 0;
-            ts = 0;
-            this.#nextPlaybackIndex = 0;
+            ts = -1; // Special case: Move before the first note.
         }
         info("New playback timestamp: " + ts);
-        if (ts == 0) {
-            return;
-        }
 
         // Find the next play event index.
         this.#nextPlaybackIndex = 0;
