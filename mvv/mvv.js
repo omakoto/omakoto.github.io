@@ -269,6 +269,14 @@ class MidiOutputManager {
         this.#device.send([176, 121, 0], 0); // Reset all controllers
         this.#device.send([255], 0); // All reset
     }
+
+
+    sendEvent(data, timestamp) {
+        if (!this.#device) {
+            return;
+        }
+        this.#device.send(data, timestamp);
+    }
 }
 
 const midiOutputManager = new MidiOutputManager();
@@ -416,7 +424,7 @@ class Recorder {
 
         return this.#moveUpToTimestamp(ts, function(ev) {
             midiRenderingStatus.onMidiMessage(ev);
-            // TODO Play back the event, with the right timestamp
+            midiOutputManager.sendEvent(ev.data, 0)
         });
     }
 
