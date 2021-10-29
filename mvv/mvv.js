@@ -7,6 +7,10 @@ const DEBUG = parseInt((new URLSearchParams(window.location.search)).get("debug"
 const SCALE = window.devicePixelRatio;
 const NOTES_COUNT = 128;
 
+if (!DEBUG) {
+    console.log("Debug log is disabled. Use " + (location.href + "?debug=1") + " to enable debug log.");
+}
+
 // We set some styles in JS.
 const BAR_RATIO = 0.3; // Bar : Roll height
 const MARGIN = 0.005; // Margin at each side
@@ -476,10 +480,14 @@ class Coordinator {
     }
 
     onKeyDown(ev) {
-        info("onKeyDown", ev.timeStamp, ev.which, ev);
+        debug("onKeyDown", ev.timeStamp, ev.which, ev);
 
         // Don't respond if any modifier keys are pressed.
         if (ev.ctrlKey || ev.shiftKey || ev.altKey || ev.metaKey) {
+            return;
+        }
+        // Ignore key repeats.
+        if (ev.originalEvent.repeat) {
             return;
         }
 
