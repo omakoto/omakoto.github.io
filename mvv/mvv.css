@@ -51,3 +51,11 @@ canvas#roll {
     height: 32px;
     display: none;
 }
+
+#fps {
+    position: fixed;
+    color: #ffff20;
+    left: 2px;
+    top: 2px;
+    display: none;
+}

@@ -8,8 +8,6 @@ const SCALE = 2; // window.devicePixelRatio;
 const NOTES_COUNT = 128;
 const BAR_RATIO = 0.3; // Keep it consistent with #canvas#bar height.
 
-const PEDAL_CONTROL = 20; // 64 ; is the real number, but to use V25's leftmost knob, which is 20.
-
 const RGB_BLACK = [0, 0, 0];
 
 // Utility functions
@@ -216,7 +214,8 @@ class MidiInputHandler {
             this.#notes[d[1]][1] = d[2];
         } else if (d[0] == 128) { // Note off
             this.#notes[d[1]][0] = false;
-        } else if (d[0] == 176 && d[1] == PEDAL_CONTROL) { // Pedal
+        } else if (d[0] == 176 && (d[1] == 64 || d[1] == 20)) { // Pedal
+            // Pedal's control number is 64, but we also use so that V25's leftmost knob can be used.
             this.#pedal = d[2];
         }
     }
@@ -352,10 +351,17 @@ const recorder = new Recorder();
 
 class Coordinator {
     #now = 0;
+    #nextSecond = 0;
+    #frames = 0;
+    #efps;
+
+    constructor() {
+        this.#nextSecond = window.performance.now() + 1000;
+        this.#efps = $("#fps");
+    }
 
     onKeyDown(ev) {
         debug("onKeyDown", ev.timeStamp, ev.which, ev);
-        ev.preventDefault(); // Let's just disable all the keyboard shortcuts to avoid accidentally reloading the page.
 
         // Don't respond if any modifier keys are pressed.
         if (ev.ctrlKey || ev.shiftKey || ev.altKey || ev.metaKey) {
@@ -366,13 +372,19 @@ class Coordinator {
             case 112: // F1
                 this.toggleVideoMute();
                 break;
+            case 70: // F
+                this.#efps.toggle();
+                break;
             case 82: // R
                 this.toggleRecording();
                 break;
             case 32: // Space
                 this.togglePlayback();
                 break;
+            default:
+                return;
         }
+        ev.preventDefault();
     }
 
     toggleVideoMute() {
@@ -428,7 +440,15 @@ class Coordinator {
     }
 
     onDraw() {
-        this.#now = window.performance.now();
+        this.#frames++;
+        var now = window.performance.now();
+        if (now >= this.#nextSecond) {
+            this.#efps.text(this.#frames);
+            this.#frames = 0;
+            this.#nextSecond += 1000;
+        }
+
+        this.#now = now;
 
         renderer.onDraw(this.#now);
         midiInputHandler.onDraw(this.#now); // This has to be called after renderer.
@@ -465,6 +485,9 @@ Coordinator.scheduleOnDraw();
 navigator.requestMIDIAccess()
     .then(onMIDISuccess, onMIDIFailure);
 $(window).keydown(function(ev) {coordinator.onKeyDown(ev);});
+
+$(window).on('beforeunload', function(){ return 'Are you sure you want to leave?'; });
+
 
 
 // var BAR_RATIO = 0.3;
