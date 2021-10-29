@@ -191,6 +191,10 @@ class Renderer {
         this.#bar.fillStyle = rgbToStr(this.#BAR_BASE_LINE_COLOR);
         this.#bar.fillRect(0, this.#BAR_H, this.#W, -this.#BAR_SUB_LINE_WIDTH)
     }
+
+    toggleMute() {
+        $('#canvases').toggle();
+    }
 }
 
 const renderer = new Renderer();
@@ -269,7 +273,59 @@ class MidiOutputHandler {
 const midiOutputHandler = new MidiOutputHandler();
 
 class Recorder {
+    #events = [];
+    #isPlaying = false;
+    #isRecording = false;
+
     constructor() {
+    }
+
+    startRecording() {
+        if (this.#isRecording) {
+            return false;
+        }
+        if (this.#isPlaying) {
+            this.stopPlaying();
+        }
+        info("Recording started");
+        this.#isRecording = true;
+    }
+
+    stopRecording() {
+        if (!this.#isRecording) {
+            return false;
+        }
+        info("Recording stopped");
+        this.#isRecording = false;
+        return true;
+    }
+
+    startPlaying() {
+        if (this.#isRecording) {
+            return false;
+        }
+        if (this.#isPlaying) {
+            return false;
+        }
+        info("Playback started");
+        this.#isPlaying = true;
+    }
+
+    stopPlaying() {
+        if (!this.#isPlaying) {
+            return false;
+        }
+        info("Playback stopped");
+        this.#isPlaying = false;
+        return true;
+    }
+
+    get isRecording() {
+        return this.#isRecording;
+    }
+
+    get isPlaying() {
+        return this.#isPlaying;
     }
 }
 
@@ -279,11 +335,65 @@ class Coordinator {
     #now = 0;
 
     onKeyDown(ev) {
-        debug("onKeyDown", ev);
+        debug("onKeyDown", ev.timeStamp, ev.which, ev);
+        switch (ev.which) {
+            case 112: // F1
+                this.toggleVideoMute();
+                break;
+            case 82: // R
+                this.toggleRecording();
+                break;
+            case 32: // Space
+                this.togglePlayback();
+                break;
+            default:
+                return;
+        }
+        ev.preventDefault();
+    }
+
+    toggleVideoMute() {
+        info("Toggle video mute");
+        renderer.toggleMute();
+    }
+
+    toggleRecording() {
+        if (recorder.isRecording) {
+            recorder.stopRecording();
+        } else {
+            recorder.startRecording();
+        }
+        this.updateRecorderStatus();
+    }
+
+    togglePlayback() {
+        if (recorder.isPlaying) {
+            recorder.stopPlaying();
+        } else {
+            recorder.startPlaying();
+        }
+        this.updateRecorderStatus();
+    }
+
+    onPlaybackFinished() {
+        updateRecorderStatus();
+    }
+
+    updateRecorderStatus() {
+        if (recorder.isPlaying) {
+            $('#playing').show();
+        } else {
+            $('#playing').hide();
+        }
+        if (recorder.isRecording) {
+            $('#recording').show();
+        } else {
+            $('#recording').hide();
+        }
     }
 
     onMidiMessage(ev) {
-        debug("onMidiMessage", ev.data[0], ev.data[1], ev.data[2],  ev);
+        debug("onMidiMessage", ev.timeStamp, ev.data[0], ev.data[1], ev.data[2],  ev);
         midiInputHandler.onMidiMessage(ev);
     }
 
