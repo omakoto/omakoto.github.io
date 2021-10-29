@@ -2,15 +2,43 @@
 // Get screen size: https://developer.mozilla.org/en-US/docs/Web/API/Window/devicePixelRatio
 // and window.screen.{width,height{
 
-function int(v) {
-    return Math.floor(v);
-}
 
 const DEBUG = true;
 const SCALE = 1; // window.devicePixelRatio;
 const NOTES_COUNT = 128;
 
 const PEDAL_CONTROL = 20; // 64 ; is the real number, but to use V25's leftmost knob, which is 20.
+
+// Utility functions
+
+function int(v) {
+    return Math.floor(v);
+}
+
+function hsvToRgb(h, s, v) {
+    var r, g, b, i, f, p, q, t;
+    if (arguments.length === 1) {
+        s = h.s, v = h.v, h = h.h;
+    }
+    i = Math.floor(h * 6);
+    f = h * 6 - i;
+    p = v * (1 - s);
+    q = v * (1 - f * s);
+    t = v * (1 - (1 - f) * s);
+    switch (i % 6) {
+        case 0: r = v, g = t, b = p; break;
+        case 1: r = q, g = v, b = p; break;
+        case 2: r = p, g = v, b = t; break;
+        case 3: r = p, g = q, b = v; break;
+        case 4: r = t, g = p, b = v; break;
+        case 5: r = v, g = p, b = q; break;
+    }
+    return [
+        Math.round(r * 255),
+        Math.round(g * 255),
+        Math.round(b * 255)
+    ];
+}
 
 function debug(...args) {
     if (!DEBUG) return;
@@ -20,6 +48,17 @@ function debug(...args) {
 function info(...args) {
     console.log(...args);
 }
+
+function toColorStr(rgb) {
+    // special common cases
+    if (rgb == 0) {
+        return "black";
+    }
+    return 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
+}
+
+
+// Logic
 
 class Renderer {
     constructor() {
@@ -43,10 +82,8 @@ class MidiInputHandler {
             this.#onNoteCount++;
             this.#notes[d[1]][0] = true;
             this.#notes[d[1]][1] = d[2];
-            this.#notes[d[1]][3] = tick;
         } else if (d[0] == 128) { // Note off
             this.#notes[d[1]][0] = false;
-            this.#notes[d[1]][3] = tick;
         } else if (d[0] == 176 && d[1] == PEDAL_CONTROL) { // Pedal
             this.#pedal = d[2];
         }
@@ -55,7 +92,7 @@ class MidiInputHandler {
     reset() {
         this.#notes = [];
         for (var i = 0; i < NOTES_COUNT; i++) {
-            this.#notes[i] = [false, 0, 0]; // note on/off, velocity, tick
+            this.#notes[i] = [false, 0]; // note on/off, velocity
         }
         this.#pedal = 0;
         this.#onNoteCount = 0;
