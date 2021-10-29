@@ -4,15 +4,22 @@
 
 
 const DEBUG = true;
-const SCALE = 1; // window.devicePixelRatio;
+const SCALE = 2; // window.devicePixelRatio;
 const NOTES_COUNT = 128;
+const BAR_RATIO = 0.3; // Keep it consistent with #canvas#bar height.
 
 const PEDAL_CONTROL = 20; // 64 ; is the real number, but to use V25's leftmost knob, which is 20.
+
+const RGB_BLACK = [0, 0, 0];
 
 // Utility functions
 
 function int(v) {
     return Math.floor(v);
+}
+
+function s(v) {
+    return int(v * SCALE);
 }
 
 function hsvToRgb(h, s, v) {
@@ -40,6 +47,14 @@ function hsvToRgb(h, s, v) {
     ];
 }
 
+function rgbToStr(rgb) {
+    // special common cases
+    if (rgb[0] == 0 && rgb[1] == 0 && rgb[2] == 0) {
+        return "black";
+    }
+    return 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
+}
+
 function debug(...args) {
     if (!DEBUG) return;
     console.log(...args);
@@ -49,22 +64,132 @@ function info(...args) {
     console.log(...args);
 }
 
-function toColorStr(rgb) {
-    // special common cases
-    if (rgb == 0) {
-        return "black";
-    }
-    return 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
-}
-
 
 // Logic
 
+
+
 class Renderer {
+    #BAR_SUB_LINE_WIDTH = s(2);
+    #BAR_BASE_LINE_COLOR = [200, 255, 200];
+    #ROLL_SCROLL_AMOUNT = s(2);
+
+    #W; // Width in canvas pixels
+    #H; // Height in canvas pixels
+    #BAR_H;
+    #ROLL_H;
+    #MIN_NOTE = 21;
+    #MAX_NOTE = 108;
+    #cbar;
+    #bar;
+    #croll;
+    #roll;
+
+    #frameCount = 0;
+
     constructor() {
+        this.#W = s(screen.width);
+        this.#H = s(screen.height);
+        this.#BAR_H = int(this.#H * BAR_RATIO);
+        this.#ROLL_H = this.#H - this.#BAR_H;
+
+        this.#cbar = document.getElementById("bar");
+        this.#bar = this.#cbar.getContext("2d");
+
+        this.#croll = document.getElementById("roll");
+        this.#roll = this.#croll.getContext("2d");
+
+        this.#cbar.width = this.#W;
+        this.#cbar.height = this.#BAR_H;
+
+        this.#croll.width = this.#W;
+        this.#croll.height = this.#ROLL_H;
+
+        this.#roll.fillStyle = 'black';
+        this.#roll.fillRect(0, 0, this.#croll.width, this.#croll.height);
+    }
+
+    getBarColor(velocity) {
+        var MAX_H = 0.4
+        var h = MAX_H - (MAX_H * velocity / 127)
+        var s = 0.9;
+        var l = 1;
+        return hsvToRgb(h, s, l)
+    }
+
+    getOnColor(count) {
+        var h = Math.max(0, 0.2 - count * 0.03)
+        var s = Math.min(1, 0.3 + 0.2 * count)
+        var l = Math.min(1, 0.4 + 0.2 * count)
+        return hsvToRgb(h, s, l)
+    }
+
+    getPedalColor(value) {
+        if (value <= 0) {
+            return RGB_BLACK;
+        }
+        var h = 0.6 - (0.06 * value / 127);
+        var s = 0.7;
+        var l = 0.2;
+        return hsvToRgb(h, s, l)
+    }
+
+
+    drawSubLine(percent) {
+        this.#bar.fillStyle = rgbToStr(this.getBarColor(127 * (1 - percent)));
+        this.#bar.fillRect(0, this.#BAR_H * percent, this.#W, this.#BAR_SUB_LINE_WIDTH)
     }
 
     onDraw(now) {
+        this.#frameCount++;
+
+        // Scroll the roll.
+        this.#roll.drawImage(this.#croll, 0, this.#ROLL_SCROLL_AMOUNT);
+        this.#roll.fillStyle = rgbToStr(this.getPedalColor(midiInputHandler.pedal));
+        this.#roll.fillRect(0, 0, this.#W, this.#ROLL_SCROLL_AMOUNT);
+
+        // Clear the bar area.
+        this.#bar.fillStyle = 'black';
+        this.#bar.fillRect(0, 0, this.#W, this.#H);
+
+        // Individual bar width
+        var bw = this.#W / (this.#MAX_NOTE - this.#MIN_NOTE + 1) - 1;
+
+        // "On" line
+        if (midiInputHandler.onNoteCount > 0) {
+            this.#roll.fillStyle = rgbToStr(this.getOnColor(midiInputHandler.onNoteCount));
+            this.#roll.fillRect(0, this.#ROLL_SCROLL_AMOUNT - s(1), this.#W, s(1));
+        }
+
+        // Sub lines.
+        this.drawSubLine(0.25);
+        this.drawSubLine(0.5);
+        this.drawSubLine(0.7);
+
+        for (var i = this.#MIN_NOTE; i <= this.#MAX_NOTE; i++) {
+            var note = midiInputHandler.getNote(i);
+            if (!note[0]) {
+                continue;
+            }
+            var color = this.getBarColor(note[1])
+            var colorStr = rgbToStr(color);
+
+            // bar left
+            var bl = this.#W * (i - this.#MIN_NOTE) / (this.#MAX_NOTE - this.#MIN_NOTE + 1)
+
+            // bar height
+            var bh = this.#BAR_H * note[1] / 127;
+
+            this.#bar.fillStyle = colorStr;
+            this.#bar.fillRect(bl, this.#BAR_H, bw, -bh);
+
+            this.#roll.fillStyle = colorStr;
+            this.#roll.fillRect(bl, 0, bw, this.#ROLL_SCROLL_AMOUNT);
+        }
+
+        // Base line.
+        this.#bar.fillStyle = rgbToStr(this.#BAR_BASE_LINE_COLOR);
+        this.#bar.fillRect(0, this.#BAR_H, this.#W, -this.#BAR_SUB_LINE_WIDTH)
     }
 }
 
@@ -111,6 +236,10 @@ class MidiInputHandler {
 
     get pedal() {
         return this.#pedal;
+    }
+
+    getNote(note) {
+        return this.#notes[note];
     }
 }
 
@@ -164,11 +293,10 @@ class Coordinator {
     }
 
     onDraw() {
-        // debug(this);
         this.#now = window.performance.now();
 
         renderer.onDraw(this.#now);
-        midiInputHandler.onDraw(this.#now);
+        midiInputHandler.onDraw(this.#now); // This has to be called after renderer.
         Coordinator.scheduleOnDraw();
     }
 
