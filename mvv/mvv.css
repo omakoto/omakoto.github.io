@@ -11,7 +11,7 @@ body {
     background-color: black;
 }
 
-canvas#canvases {
+#canvases {
     margin: 0;
     width: 99%;
     height: 99%;

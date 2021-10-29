@@ -4,7 +4,7 @@
 
 
 const DEBUG = parseInt((new URLSearchParams(window.location.search)).get("debug")) ? true : false;
-const SCALE = 2; // window.devicePixelRatio;
+const SCALE = Math.floor(window.devicePixelRatio);
 const NOTES_COUNT = 128;
 const BAR_RATIO = 0.3; // Keep it consistent with #canvas#bar height.
 
