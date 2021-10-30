@@ -4,11 +4,13 @@
 
 
 const DEBUG = parseInt((new URLSearchParams(window.location.search)).get("debug")) ? true : false;
-const SCALE = window.devicePixelRatio;
+const SCALE_ARG = parseFloat("0" + (new URLSearchParams(window.location.search)).get("scale"));
+const SCALE = SCALE_ARG > 0 ? SCALE_ARG : window.devicePixelRatio;
+console.log("Scale: " + SCALE);
 const NOTES_COUNT = 128;
 
 if (!DEBUG) {
-    console.log("Debug log is disabled. Use " + (location.href + "?debug=1") + " to enable debug log.");
+    console.log("Debug log is disabled. Use ?debug=1 to enable debug log.");
 }
 
 // We set some styles in JS.
