@@ -105,11 +105,14 @@ class Renderer {
         this.#BAR_H = int(this.#H * BAR_RATIO);
         this.#ROLL_H = this.#H - this.#BAR_H;
 
+        const colorSpace = "srgb"; // "display-p3";
+        var options = { colorSpace: colorSpace};
+
         this.#cbar = document.getElementById("bar");
-        this.#bar = this.#cbar.getContext("2d");
+        this.#bar = this.#cbar.getContext("2d", options);
 
         this.#croll = document.getElementById("roll");
-        this.#roll = this.#croll.getContext("2d");
+        this.#roll = this.#croll.getContext("2d", options);
 
         this.#cbar.width = this.#W;
         this.#cbar.height = this.#BAR_H;
