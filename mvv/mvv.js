@@ -212,6 +212,10 @@ class Renderer {
     toggleMute() {
         $('#canvases').toggle();
     }
+
+    show() {
+        $('#canvases').show();
+    }
 }
 
 const renderer = new Renderer();
@@ -546,6 +550,7 @@ class Coordinator {
             recorder.stopPlaying();
             this.resetMidi();
         } else {
+            renderer.show();
             recorder.startPlaying();
         }
         this.#updateRecorderStatus();
