@@ -447,7 +447,7 @@ class Recorder {
         // Current timestamp
         var ts = this.#getCurrentPlaybackTimestamp();
 
-        return this.#moveUpToTimestamp(ts, function(ev) {
+        return this.#moveUpToTimestamp(ts, (ev) => {
             midiRenderingStatus.onMidiMessage(ev);
             midiOutputManager.sendEvent(ev.data, 0)
         });
@@ -620,7 +620,7 @@ class Coordinator {
     }
 
     static scheduleOnDraw() {
-        requestAnimationFrame(function() {coordinator.onDraw();})
+        requestAnimationFrame(() => coordinator.onDraw())
     }
 
     onTimer() {
@@ -643,7 +643,7 @@ function onMIDISuccess(midiAccess) {
 
     for (var input of midiAccess.inputs.values()) {
         console.log("Input: ", input);
-        input.onmidimessage = function(ev) {coordinator.onMidiMessage(ev); };
+        input.onmidimessage = (ev) => coordinator.onMidiMessage(ev);
     }
     for (var output of midiAccess.outputs.values()) {
         console.log("Output: ", output);
@@ -657,16 +657,14 @@ function onMIDIFailure() {
     alert('Could not access your MIDI devices.');
 }
 
-setInterval(function() {coordinator.onTimer();}, 5);
+setInterval(() => coordinator.onTimer(), 5);
 Coordinator.scheduleOnDraw();
 navigator.requestMIDIAccess()
     .then(onMIDISuccess, onMIDIFailure);
-$(window).keydown(function(ev) {coordinator.onKeyDown(ev);});
+$(window).keydown((ev) => coordinator.onKeyDown(ev));
 
-$(window).on('beforeunload', function(){
-    return 'Are you sure you want to leave?';
-});
-$(window).on('unload', function() {
+$(window).on('beforeunload', () => 'Are you sure you want to leave?');
+$(window).on('unload', () => {
     coordinator.close();
 });
 
