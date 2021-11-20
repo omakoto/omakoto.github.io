@@ -426,7 +426,7 @@ class Recorder {
         if (ts <= 0) {
             this.#playbackStartTimestamp = window.performance.now();
             this.#playbackTimeAdjustment = 0;
-            ts = -1; // Special case: Move before the first note.
+              ts = -1; // Special case: Move before the first note.
         }
         info("New playback timestamp: " + ts);
 

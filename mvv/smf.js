@@ -1,8 +1,19 @@
 // SMF Format: https://ccrma.stanford.edu/~craig/14q/midifile/MidiFileFormat.html
 // https://www.music.mcgill.ca/~gary/306/week9/smf.html
+// https://midimusic.github.io/tech/midispec.html
+
+function logBlob(blob) {
+    let fileReader = new FileReader();
+    fileReader.readAsArrayBuffer(blob);
+
+    fileReader.onload = function(event) {
+        console.log(fileReader.result);
+    };
+    return blob;
+}
 
 class BytesWriter {
-    #cap = 8; // 1024 * 32;
+    #cap = 2; // 1024 * 32;
     #size = 0;
     #buf;
 
@@ -49,20 +60,20 @@ class BytesWriter {
     }
 
     setI8(pos, val) {
-        this.#ensureCap(pos);
+        this.#ensureCap(pos + 1);
         this.#buf[pos + 0] = (val >>  0) & 255;
         return this;
     }
 
     setI16(pos, val) {
-        this.#ensureCap(pos + 1);
+        this.#ensureCap(pos + 2);
         this.#buf[pos + 0] = (val >>  8) & 255;
         this.#buf[pos + 1] = (val >>  0) & 255;
         return this;
     }
 
     setI32(pos, val) {
-        this.#ensureCap(pos + 3);
+        this.#ensureCap(pos + 4);
         this.#buf[pos + 0] = (val >> 24) & 255;
         this.#buf[pos + 1] = (val >> 16) & 255;
         this.#buf[pos + 2] = (val >>  8) & 255;
@@ -93,6 +104,12 @@ class BytesWriter {
     getSize() {
         return this.#size;
     }
+
+    getBlob(contentType) {
+        var ret = (new Blob([this.#buf])).slice(0, this.#size, contentType);
+        // logBlob(ret);
+        return ret;
+    }
 }
 
 class BytesReader {
@@ -106,6 +123,63 @@ class SmfReader {
 }
 
 class SmfWriter {
+    #writer = new BytesWriter();
+
+    #trackLengthPos;
+
     constructor() {
+        this.#writer.writeI8(0x4D); // M
+        this.#writer.writeI8(0x54); // T
+        this.#writer.writeI8(0x68); // h
+        this.#writer.writeI8(0x64); // d
+
+        this.#writer.writeI32(6); // header length
+
+        this.#writer.writeI16(0); // single track
+        this.#writer.writeI16(1); // contains a single track
+        this.#writer.writeI16(96); // 96 per quarter-note
+
+        this.#writer.writeI8(0x4D); // M
+        this.#writer.writeI8(0x54); // T
+        this.#writer.writeI8(0x72); // r
+        this.#writer.writeI8(0x6B); // k
+
+        this.#trackLengthPos = this.#writer.getSize();
+        this.#writer.writeI32(0); // Track length
+    }
+
+    getBlob() {
+        return this.#writer.getBlob("audio/mid");
+    }
+
+    download(filename) {
+        downloadMidi(this.getBlob(), filename);
     }
 }
+
+function downloadMidi(blob, filename) {
+    if (!filename) {
+        filename = "mvv.mid";
+    }
+
+    var element = document.createElement('a');
+    element.setAttribute('download', filename);
+
+    element.style.display = 'none';
+    document.body.appendChild(element);
+
+    let reader = new FileReader();
+    reader.readAsDataURL(blob); // converts the blob to base64 and calls onload
+
+    reader.onload = function() {
+        element.href = reader.result; // data url
+        element.click();
+        document.body.removeChild(element);
+    };
+}
+
+// For manual testing
+function t() {
+    (new SmfWriter()).download();
+}
+
