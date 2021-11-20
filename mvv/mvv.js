@@ -31,7 +31,7 @@ function s(v) {
 }
 
 function hsvToRgb(h, s, v) {
-    var r, g, b, i, f, p, q, t;
+    let r, g, b, i, f, p, q, t;
     if (arguments.length === 1) {
         s = h.s, v = h.v, h = h.h;
     }
@@ -108,7 +108,7 @@ class Renderer {
         this.#ROLL_H = this.#H - this.#BAR_H;
 
         const colorSpace = "srgb"; // "display-p3";
-        var options = { colorSpace: colorSpace};
+        let options = { colorSpace: colorSpace};
 
         this.#cbar = document.getElementById("bar");
         this.#bar = this.#cbar.getContext("2d", options);
@@ -127,17 +127,17 @@ class Renderer {
     }
 
     getBarColor(velocity) {
-        var MAX_H = 0.4
-        var h = MAX_H - (MAX_H * velocity / 127)
-        var s = 0.9;
-        var l = 1;
+        let MAX_H = 0.4
+        let h = MAX_H - (MAX_H * velocity / 127)
+        let s = 0.9;
+        let l = 1;
         return hsvToRgb(h, s, l)
     }
 
     getOnColor(count) {
-        var h = Math.max(0, 0.2 - count * 0.03)
-        var s = Math.min(1, 0.3 + 0.2 * count)
-        var l = Math.min(1, 0.4 + 0.2 * count)
+        let h = Math.max(0, 0.2 - count * 0.03)
+        let s = Math.min(1, 0.3 + 0.2 * count)
+        let l = Math.min(1, 0.4 + 0.2 * count)
         return hsvToRgb(h, s, l)
     }
 
@@ -145,9 +145,9 @@ class Renderer {
         if (value <= 0) {
             return RGB_BLACK;
         }
-        var h = 0.65 - (0.2 * value / 127);
-        var s = 0.7;
-        var l = 0.2;
+        let h = 0.65 - (0.2 * value / 127);
+        let s = 0.7;
+        let l = 0.2;
         return hsvToRgb(h, s, l)
     }
 
@@ -170,7 +170,7 @@ class Renderer {
         this.#bar.fillRect(0, 0, this.#W, this.#H);
 
         // Individual bar width
-        var bw = this.#W / (this.#MAX_NOTE - this.#MIN_NOTE + 1) - 1;
+        let bw = this.#W / (this.#MAX_NOTE - this.#MIN_NOTE + 1) - 1;
 
         // "On" line
         if (midiRenderingStatus.onNoteCount > 0) {
@@ -183,19 +183,19 @@ class Renderer {
         this.drawSubLine(0.5);
         this.drawSubLine(0.7);
 
-        for (var i = this.#MIN_NOTE; i <= this.#MAX_NOTE; i++) {
-            var note = midiRenderingStatus.getNote(i);
+        for (let i = this.#MIN_NOTE; i <= this.#MAX_NOTE; i++) {
+            let note = midiRenderingStatus.getNote(i);
             if (!note[0]) {
                 continue;
             }
-            var color = this.getBarColor(note[1])
-            var colorStr = rgbToStr(color);
+            let color = this.getBarColor(note[1])
+            let colorStr = rgbToStr(color);
 
             // bar left
-            var bl = this.#W * (i - this.#MIN_NOTE) / (this.#MAX_NOTE - this.#MIN_NOTE + 1)
+            let bl = this.#W * (i - this.#MIN_NOTE) / (this.#MAX_NOTE - this.#MIN_NOTE + 1)
 
             // bar height
-            var bh = this.#BAR_H * note[1] / 127;
+            let bh = this.#BAR_H * note[1] / 127;
 
             this.#bar.fillStyle = colorStr;
             this.#bar.fillRect(bl, this.#BAR_H, bw, -bh);
@@ -230,7 +230,7 @@ class MidiRenderingStatus {
     }
 
     onMidiMessage(ev) {
-        var d = ev.data;
+        let d = ev.data;
 
         if (d[0] == 144) { // Note on
             this.#onNoteCount++;
@@ -245,7 +245,7 @@ class MidiRenderingStatus {
 
     reset() {
         this.#notes = [];
-        for (var i = 0; i < NOTES_COUNT; i++) {
+        for (let i = 0; i < NOTES_COUNT; i++) {
             this.#notes[i] = [false, 0]; // note on/off, velocity
         }
         this.#pedal = 0;
@@ -421,7 +421,7 @@ class Recorder {
     // Fastfoward or rewind.
     adjustPlaybackPosition(milliseconds) {
         this.#playbackTimeAdjustment += milliseconds;
-        var ts = this.#getCurrentPlaybackTimestamp();
+        let ts = this.#getCurrentPlaybackTimestamp();
         // If rewound beyond the starting point, just reset the
         if (ts <= 0) {
             this.#playbackStartTimestamp = window.performance.now();
@@ -445,7 +445,7 @@ class Recorder {
         }
 
         // Current timestamp
-        var ts = this.#getCurrentPlaybackTimestamp();
+        let ts = this.#getCurrentPlaybackTimestamp();
 
         return this.#moveUpToTimestamp(ts, (ev) => {
             midiRenderingStatus.onMidiMessage(ev);
@@ -461,7 +461,7 @@ class Recorder {
                 coordinator.onPlaybackFinished();
                 return false;
             }
-            var ev = this.#events[this.#nextPlaybackIndex];
+            let ev = this.#events[this.#nextPlaybackIndex];
             if (ev.relativeTimeStamp > timestamp) {
                 return true;
             }
@@ -578,7 +578,7 @@ class Coordinator {
     #normalizeMidiEvent(ev) {
         // Allow V25's leftmost knob to be used as the pedal.
         if (ev.currentTarget.name.startsWith("V25")) {
-            var d = ev.data;
+            let d = ev.data;
             if (d[0] == 176 && d[1] == 20) {
                 d[1] = 64;
             }
@@ -603,7 +603,7 @@ class Coordinator {
     onDraw() {
         // Update FPS
         this.#frames++;
-        var now = window.performance.now();
+        let now = window.performance.now();
         if (now >= this.#nextSecond) {
             this.#efps.text(this.#frames + "/" + this.#timerTicks);
             this.#frames = 0;
@@ -641,11 +641,11 @@ const coordinator = new Coordinator();
 function onMIDISuccess(midiAccess) {
     console.log("onMIDISuccess");
 
-    for (var input of midiAccess.inputs.values()) {
+    for (let input of midiAccess.inputs.values()) {
         console.log("Input: ", input);
         input.onmidimessage = (ev) => coordinator.onMidiMessage(ev);
     }
-    for (var output of midiAccess.outputs.values()) {
+    for (let output of midiAccess.outputs.values()) {
         console.log("Output: ", output);
         if (!/midi through/i.test(output.name)) {
             midiOutputManager.setMidiOut(output);

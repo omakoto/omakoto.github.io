@@ -23,17 +23,17 @@ class BytesWriter {
 
     writeVar(val) {
         if (val >= 0x200000) {
-            var v = val / 0x200000;
+            let v = val / 0x200000;
             val &= (0x200000 - 1)
             this.writeI8(0x80 | v);
         }
         if (val >= 0x4000) {
-            var v = val / 0x4000;
+            let v = val / 0x4000;
             val &= (0x4000 - 1)
             this.writeI8(0x80 | v);
         }
         if (val >= 0x80) {
-            var v = val / 0x80;
+            let v = val / 0x80;
             val &= (0x80 - 1)
             this.writeI8(0x80 | v);
         }
@@ -83,7 +83,7 @@ class BytesWriter {
 
     #grow() {
         this.#cap *= 2;
-        var nb = new Uint8Array(this.#cap);
+        let nb = new Uint8Array(this.#cap);
         nb.set(this.#buf);
         this.#buf = nb;
         return this;
@@ -106,7 +106,7 @@ class BytesWriter {
     }
 
     getBlob(contentType) {
-        var ret = (new Blob([this.#buf])).slice(0, this.#size, contentType);
+        let ret = (new Blob([this.#buf])).slice(0, this.#size, contentType);
         // logBlob(ret);
         return ret;
     }
@@ -162,7 +162,7 @@ function downloadMidi(blob, filename) {
         filename = "mvv.mid";
     }
 
-    var element = document.createElement('a');
+    let element = document.createElement('a');
     element.setAttribute('download', filename);
 
     element.style.display = 'none';
