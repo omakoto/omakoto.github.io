@@ -127,6 +127,8 @@ class SmfWriter {
 
     #trackLengthPos;
 
+    #closed = false;
+
     constructor() {
         this.#writer.writeI8(0x4D); // M
         this.#writer.writeI8(0x54); // T
@@ -146,9 +148,78 @@ class SmfWriter {
 
         this.#trackLengthPos = this.#writer.getSize();
         this.#writer.writeI32(0); // Track length
+
+        // Time signature
+        this.#writer.writeVar(0); // time
+        this.#writer.writeI8(0xff);
+        this.#writer.writeI8(0x58);
+        this.#writer.writeI8(0x04);
+        this.#writer.writeI8(0x04);
+        this.#writer.writeI8(0x02);
+        this.#writer.writeI8(0x18);
+        this.#writer.writeI8(0x08);
+
+        // tempo
+        this.#writer.writeVar(0); // time
+        this.#writer.writeI8(0xff);
+        this.#writer.writeI8(0x51);
+        this.#writer.writeI8(0x03);
+        this.#writer.writeI8(0x07);
+        this.#writer.writeI8(0xa1);
+        this.#writer.writeI8(0x20);
+
+        this.#writeResetData();
+
+        // Sample data
+
+        // Note on
+        this.#writer.writeVar(0); // time
+        this.#writer.writeI8(90);
+        this.#writer.writeI8(48);
+        this.#writer.writeI8(96)
+
+        // Note off
+        this.#writer.writeVar(192); // time
+        this.#writer.writeI8(80);
+        this.#writer.writeI8(48);
+        this.#writer.writeI8(64);
+    }
+
+    #writeResetData() {
+        // All notes off
+        this.#writer.writeVar(0); // time
+        this.#writer.writeI8(176);
+        this.#writer.writeI8(123);
+        this.#writer.writeI8(0);
+
+        // Reset all controllers
+        this.#writer.writeVar(0); // time
+        this.#writer.writeI8(176);
+        this.#writer.writeI8(121);
+        this.#writer.writeI8(0);
+
+        // // All reset
+        // TODO: Hmm, 0xFF conflicts with meta event header, so we can't use it?
+        // this.#writer.writeVar(0); // time
+        // this.#writer.writeI8(255);
+    }
+
+    close() {
+        if (this.#closed) {
+            return;
+        }
+        // end of track
+        this.#writer.writeVar(0); // time
+        this.#writer.writeI8(0xff);
+        this.#writer.writeI8(0x2f);
+        this.#writer.writeI8(0x00);
+
+        let pos = this.#writer.getSize();
+        this.#writer.setI32(this.#trackLengthPos, pos - this.#trackLengthPos - 4);
     }
 
     getBlob() {
+        this.close();
         return this.#writer.getBlob("audio/mid");
     }
 
