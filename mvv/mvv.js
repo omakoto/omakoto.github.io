@@ -72,10 +72,16 @@ function info(...args) {
     console.log(...args);
 }
 
+// Return the current time in "yyyy-mm-dd-hh-mm-ss.mmm" format, which is used for
+// midi filenames.
+function getCurrentTime() {
+    const nowUtc = new Date();
+    const nowLocal = new Date(nowUtc.getTime() - (nowUtc.getTimezoneOffset() * 60 * 1000));
+    let ret = nowLocal.toISOString();
+    return ret.replace("Z", "").replaceAll(/[:T]/g, "-");
+}
 
 // Logic
-
-
 
 class Renderer {
     #BAR_SUB_LINE_WIDTH = s(2);
@@ -489,7 +495,7 @@ class Recorder {
             wr.writeMessage(delta, m.event.data);
             lastTimestamp = m.relativeTimeStamp;
         });
-        wr.download();
+        wr.download("mvv-" + getCurrentTime() + ".mid");
     }
 }
 

@@ -257,7 +257,7 @@ class SmfWriter {
 
 function downloadMidi(blob, filename) {
     if (!filename) {
-        filename = "mvv.mid";
+        filename = "unnamed.mid";
     }
 
     let element = document.createElement('a');
