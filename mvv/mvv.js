@@ -472,6 +472,11 @@ class Recorder {
             }
         }
     }
+
+    download() {
+        let wr = new SmfWriter();
+
+    }
 }
 
 const recorder = new Recorder();
@@ -509,6 +514,9 @@ class Coordinator {
                 break;
             case 82: // R
                 this.toggleRecording();
+                break;
+            case 83: // S
+                recorder.download();
                 break;
             case 32: // Space
                 this.togglePlayback();

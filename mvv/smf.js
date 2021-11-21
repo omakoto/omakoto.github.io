@@ -240,6 +240,13 @@ class SmfWriter {
     download(filename) {
         downloadMidi(this.getBlob(), filename);
     }
+
+    writeMessage(deltaTimeMs, data) {
+        this.#writer.writeVar(deltaTimeMs);
+        for (let i = 0; i < data.length; i++) {
+            this.#writer.writeI8(data[i]);
+        }
+    }
 }
 
 function downloadMidi(blob, filename) {
