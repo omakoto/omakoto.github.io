@@ -9,6 +9,8 @@ body {
     padding: 0.5%; /* Note we override it in JS */
     overflow: hidden;
     background-color: black;
+    font-size: 10pt;
+    font-family: 'Roboto', sans-serif;
 }
 
 #canvases {
