@@ -25,60 +25,60 @@ class BytesWriter {
         if (val >= 0x200000) {
             let v = val / 0x200000;
             val &= (0x200000 - 1)
-            this.writeI8(0x80 | v);
+            this.writeU8(0x80 | v);
         }
         if (val >= 0x4000) {
             let v = val / 0x4000;
             val &= (0x4000 - 1)
-            this.writeI8(0x80 | v);
+            this.writeU8(0x80 | v);
         }
         if (val >= 0x80) {
             let v = val / 0x80;
             val &= (0x80 - 1)
-            this.writeI8(0x80 | v);
+            this.writeU8(0x80 | v);
         }
-        this.writeI8(val);
+        this.writeU8(val);
         return this;
     }
 
-    writeI8(val) {
-        this.setI8(this.#size, val);
+    writeU8(val) {
+        this.setU8(this.#size, val);
         this.#size += 1;
         return this;
     }
 
-    writeI16(val) {
-        this.setI16(this.#size, val);
+    writeU16(val) {
+        this.setU16(this.#size, val);
         this.#size += 2;
         return this;
     }
 
-    writeI32(val) {
-        this.setI32(this.#size, val);
+    writeU32(val) {
+        this.setU32(this.#size, val);
         this.#size += 4;
         return this;
     }
 
-    writeI24(val) {
-        this.setI24(this.#size, val);
+    writeU24(val) {
+        this.setU24(this.#size, val);
         this.#size += 3;
         return this;
     }
 
-    setI8(pos, val) {
+    setU8(pos, val) {
         this.#ensureCap(pos + 1);
         this.#buf[pos + 0] = (val >>  0) & 255;
         return this;
     }
 
-    setI16(pos, val) {
+    setU16(pos, val) {
         this.#ensureCap(pos + 2);
         this.#buf[pos + 0] = (val >>  8) & 255;
         this.#buf[pos + 1] = (val >>  0) & 255;
         return this;
     }
 
-    setI24(pos, val) {
+    setU24(pos, val) {
         this.#ensureCap(pos + 3);
         this.#buf[pos + 0] = (val >> 16) & 255;
         this.#buf[pos + 1] = (val >>  8) & 255;
@@ -86,7 +86,7 @@ class BytesWriter {
         return this;
     }
 
-    setI32(pos, val) {
+    setU32(pos, val) {
         this.#ensureCap(pos + 4);
         this.#buf[pos + 0] = (val >> 24) & 255;
         this.#buf[pos + 1] = (val >> 16) & 255;
@@ -144,41 +144,41 @@ class SmfWriter {
     #closed = false;
 
     constructor() {
-        this.#writer.writeI8(0x4D); // M
-        this.#writer.writeI8(0x54); // T
-        this.#writer.writeI8(0x68); // h
-        this.#writer.writeI8(0x64); // d
+        this.#writer.writeU8(0x4D); // M
+        this.#writer.writeU8(0x54); // T
+        this.#writer.writeU8(0x68); // h
+        this.#writer.writeU8(0x64); // d
 
-        this.#writer.writeI32(6); // header length
+        this.#writer.writeU32(6); // header length
 
-        this.#writer.writeI16(0); // single track
-        this.#writer.writeI16(1); // contains a single track
-        this.#writer.writeI16(1000); // 1000 per quarter-note == 1ms / unit
+        this.#writer.writeU16(0); // single track
+        this.#writer.writeU16(1); // contains a single track
+        this.#writer.writeU16(1000); // 1000 per quarter-note == 1ms / unit
 
-        this.#writer.writeI8(0x4D); // M
-        this.#writer.writeI8(0x54); // T
-        this.#writer.writeI8(0x72); // r
-        this.#writer.writeI8(0x6B); // k
+        this.#writer.writeU8(0x4D); // M
+        this.#writer.writeU8(0x54); // T
+        this.#writer.writeU8(0x72); // r
+        this.#writer.writeU8(0x6B); // k
 
         this.#trackLengthPos = this.#writer.getSize();
-        this.#writer.writeI32(0); // Track length
+        this.#writer.writeU32(0); // Track length
 
         // Time signature
         this.#writer.writeVar(0); // time
-        this.#writer.writeI8(0xff);
-        this.#writer.writeI8(0x58);
-        this.#writer.writeI8(0x04);
-        this.#writer.writeI8(0x04);
-        this.#writer.writeI8(0x02);
-        this.#writer.writeI8(0x18);
-        this.#writer.writeI8(0x08);
+        this.#writer.writeU8(0xff);
+        this.#writer.writeU8(0x58);
+        this.#writer.writeU8(0x04);
+        this.#writer.writeU8(0x04);
+        this.#writer.writeU8(0x02);
+        this.#writer.writeU8(0x18);
+        this.#writer.writeU8(0x08);
 
         // tempo
         this.#writer.writeVar(0); // time
-        this.#writer.writeI8(0xff);
-        this.#writer.writeI8(0x51);
-        this.#writer.writeI8(0x03);
-        this.#writer.writeI24(1000000); // 100,000 == 60 bpm
+        this.#writer.writeU8(0xff);
+        this.#writer.writeU8(0x51);
+        this.#writer.writeU8(0x03);
+        this.#writer.writeU24(1000000); // 100,000 == 60 bpm
 
         this.#writeResetData();
 
@@ -187,35 +187,35 @@ class SmfWriter {
         // // Note on
         // for (let i = 0; i < 16; i++) {
         //     this.#writer.writeVar(0); // time
-        //     this.#writer.writeI8(0x90);
-        //     this.#writer.writeI8(48);
-        //     this.#writer.writeI8(96)
+        //     this.#writer.writeU8(0x90);
+        //     this.#writer.writeU8(48);
+        //     this.#writer.writeU8(96)
 
         //     // Note off
         //     this.#writer.writeVar(100); // time
-        //     this.#writer.writeI8(0x80);
-        //     this.#writer.writeI8(48);
-        //     this.#writer.writeI8(0);
+        //     this.#writer.writeU8(0x80);
+        //     this.#writer.writeU8(48);
+        //     this.#writer.writeU8(0);
         // }
     }
 
     #writeResetData() {
         // All notes off
         this.#writer.writeVar(0); // time
-        this.#writer.writeI8(176);
-        this.#writer.writeI8(123);
-        this.#writer.writeI8(0);
+        this.#writer.writeU8(176);
+        this.#writer.writeU8(123);
+        this.#writer.writeU8(0);
 
         // Reset all controllers
         this.#writer.writeVar(0); // time
-        this.#writer.writeI8(176);
-        this.#writer.writeI8(121);
-        this.#writer.writeI8(0);
+        this.#writer.writeU8(176);
+        this.#writer.writeU8(121);
+        this.#writer.writeU8(0);
 
         // // All reset
         // TODO: Hmm, 0xFF conflicts with meta event header, so we can't use it?
         // this.#writer.writeVar(0); // time
-        // this.#writer.writeI8(255);
+        // this.#writer.writeU8(255);
     }
 
     close() {
@@ -224,12 +224,12 @@ class SmfWriter {
         }
         // end of track
         this.#writer.writeVar(0); // time
-        this.#writer.writeI8(0xff);
-        this.#writer.writeI8(0x2f);
-        this.#writer.writeI8(0x00);
+        this.#writer.writeU8(0xff);
+        this.#writer.writeU8(0x2f);
+        this.#writer.writeU8(0x00);
 
         let pos = this.#writer.getSize();
-        this.#writer.setI32(this.#trackLengthPos, pos - this.#trackLengthPos - 4);
+        this.#writer.setU32(this.#trackLengthPos, pos - this.#trackLengthPos - 4);
     }
 
     getBlob() {
@@ -244,7 +244,7 @@ class SmfWriter {
     writeMessage(deltaTimeMs, data) {
         this.#writer.writeVar(deltaTimeMs);
         for (let i = 0; i < data.length; i++) {
-            this.#writer.writeI8(data[i]);
+            this.#writer.writeU8(data[i]);
         }
     }
 }
