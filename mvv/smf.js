@@ -192,7 +192,7 @@ class SmfWriter {
         //     this.#writer.writeU8(96)
 
         //     // Note off
-        //     this.#writer.writeVar(100); // time
+        //     this.#writer.writeVar(1000); // time
         //     this.#writer.writeU8(0x80);
         //     this.#writer.writeU8(48);
         //     this.#writer.writeU8(0);
@@ -202,15 +202,21 @@ class SmfWriter {
     #writeResetData() {
         // All notes off
         this.#writer.writeVar(0); // time
-        this.#writer.writeU8(176);
+        this.#writer.writeU8(0xb0);
         this.#writer.writeU8(123);
         this.#writer.writeU8(0);
 
         // Reset all controllers
         this.#writer.writeVar(0); // time
-        this.#writer.writeU8(176);
+        this.#writer.writeU8(0xb0);
         this.#writer.writeU8(121);
         this.#writer.writeU8(0);
+
+        // Set channel volume
+        this.#writer.writeVar(0); // time
+        this.#writer.writeU8(0xb0);
+        this.#writer.writeU8(7);
+        this.#writer.writeU8(127);
 
         // // All reset
         // TODO: Hmm, 0xFF conflicts with meta event header, so we can't use it?

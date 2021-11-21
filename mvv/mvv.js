@@ -418,7 +418,7 @@ class Recorder {
         return true;
     }
 
-    // Fastfoward or rewind.
+    // Fast-forward or rewind.
     adjustPlaybackPosition(milliseconds) {
         this.#playbackTimeAdjustment += milliseconds;
         let ts = this.#getCurrentPlaybackTimestamp();
@@ -474,8 +474,22 @@ class Recorder {
     }
 
     download() {
-        let wr = new SmfWriter();
+        if (this.#events.length == 0) {
+            alert("Nothing recorded yet");
+            console.log("Nothing recorded.");
+            return;
+        }
+        console.log("Converting to the SMF format...");
 
+        let wr = new SmfWriter();
+        let lastTimestamp = this.#events[0].relativeTimeStamp;
+
+        this.#events.forEach((m) => {
+            let delta = m.relativeTimeStamp - lastTimestamp;
+            wr.writeMessage(delta, m.event.data);
+            lastTimestamp = m.relativeTimeStamp;
+        });
+        wr.download();
     }
 }
 
