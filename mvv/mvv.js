@@ -83,6 +83,22 @@ function getCurrentTime() {
 
 // Logic
 
+class MidiEvent {
+    constructor(timeStamp, data, device) {
+        this.timeStamp = timeStamp;
+        this.data = data;
+        this.device = device ? device : "unknown-device";
+    }
+
+    static fromNativeEvent(e) {
+        return new MidiEvent(e.timeStamp, e.data, e.currentTarget.name);
+    }
+
+    withTimestamp(timeStamp) {
+        return new MidiEvent(timeStamp, this.data, this.device);
+    }
+}
+
 class Renderer {
     #BAR_SUB_LINE_WIDTH = s(2);
     #BAR_BASE_LINE_COLOR = [200, 255, 200];
@@ -301,7 +317,6 @@ class MidiOutputManager {
         info("MIDI reset");
     }
 
-
     sendEvent(data, timestamp) {
         if (!this.#device) {
             return;
@@ -311,13 +326,6 @@ class MidiOutputManager {
 }
 
 const midiOutputManager = new MidiOutputManager();
-
-class RecordedEvent {
-    constructor(relativeTimeStamp, ev) {
-        this.relativeTimeStamp = relativeTimeStamp;
-        this.event = ev;
-    }
-}
 
 class Recorder {
     #events = [];
@@ -419,7 +427,7 @@ class Recorder {
             // First event, remember the timestamp.
             this.#recordingStartTimestamp = ev.timeStamp;
         }
-        this.#events.push(new RecordedEvent(ev.timeStamp - this.#recordingStartTimestamp, ev));
+        this.#events.push(ev.withTimestamp(ev.timeStamp - this.#recordingStartTimestamp));
 
         return true;
     }
@@ -468,13 +476,13 @@ class Recorder {
                 return false;
             }
             let ev = this.#events[this.#nextPlaybackIndex];
-            if (ev.relativeTimeStamp > timestamp) {
+            if (ev.timeStamp > timestamp) {
                 return true;
             }
             this.#nextPlaybackIndex++;
 
             if (callback) {
-                callback(ev.event);
+                callback(ev);
             }
         }
     }
@@ -488,12 +496,13 @@ class Recorder {
         console.log("Converting to the SMF format...");
 
         let wr = new SmfWriter();
-        let lastTimestamp = this.#events[0].relativeTimeStamp;
+        let lastTimestamp = this.#events[0].timeStamp;
 
-        this.#events.forEach((m) => {
-            let delta = m.relativeTimeStamp - lastTimestamp;
-            wr.writeMessage(delta, m.event.data);
-            lastTimestamp = m.relativeTimeStamp;
+        this.#events.forEach((ev) => {
+            debug(ev.timeStamp, ev.data);
+            let delta = ev.timeStamp - lastTimestamp;
+            wr.writeMessage(delta, ev.data);
+            lastTimestamp = ev.timeStamp;
         });
         wr.download("mvv-" + getCurrentTime() + ".mid");
     }
@@ -605,7 +614,7 @@ class Coordinator {
 
     #normalizeMidiEvent(ev) {
         // Allow V25's leftmost knob to be used as the pedal.
-        if (ev.currentTarget.name.startsWith("V25")) {
+        if (ev.device.startsWith("V25")) {
             let d = ev.data;
             if (d[0] == 176 && d[1] == 20) {
                 d[1] = 64;
@@ -671,7 +680,9 @@ function onMIDISuccess(midiAccess) {
 
     for (let input of midiAccess.inputs.values()) {
         console.log("Input: ", input);
-        input.onmidimessage = (ev) => coordinator.onMidiMessage(ev);
+        input.onmidimessage = (ev) => {
+            coordinator.onMidiMessage(MidiEvent.fromNativeEvent(ev));
+        }
     }
     for (let output of midiAccess.outputs.values()) {
         console.log("Output: ", output);

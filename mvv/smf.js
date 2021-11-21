@@ -181,22 +181,6 @@ class SmfWriter {
         this.#writer.writeU24(1000000); // 100,000 == 60 bpm
 
         this.#writeResetData();
-
-        // // Sample data
-
-        // // Note on
-        // for (let i = 0; i < 16; i++) {
-        //     this.#writer.writeVar(0); // time
-        //     this.#writer.writeU8(0x90);
-        //     this.#writer.writeU8(48);
-        //     this.#writer.writeU8(96)
-
-        //     // Note off
-        //     this.#writer.writeVar(1000); // time
-        //     this.#writer.writeU8(0x80);
-        //     this.#writer.writeU8(48);
-        //     this.#writer.writeU8(0);
-        // }
     }
 
     #writeResetData() {
