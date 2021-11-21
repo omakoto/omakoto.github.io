@@ -11,6 +11,7 @@
 - `SPACE` Playback start/stop
   - `Left`/`Right` during playback -- Rewind/Fast-forward
 - `S` Save the last recording
+- `F` Show FPS and playback timer ticks/second
 
 ## Supported midi events
 
