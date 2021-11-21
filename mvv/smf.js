@@ -59,6 +59,12 @@ class BytesWriter {
         return this;
     }
 
+    writeI24(val) {
+        this.setI24(this.#size, val);
+        this.#size += 3;
+        return this;
+    }
+
     setI8(pos, val) {
         this.#ensureCap(pos + 1);
         this.#buf[pos + 0] = (val >>  0) & 255;
@@ -69,6 +75,14 @@ class BytesWriter {
         this.#ensureCap(pos + 2);
         this.#buf[pos + 0] = (val >>  8) & 255;
         this.#buf[pos + 1] = (val >>  0) & 255;
+        return this;
+    }
+
+    setI24(pos, val) {
+        this.#ensureCap(pos + 3);
+        this.#buf[pos + 0] = (val >> 16) & 255;
+        this.#buf[pos + 1] = (val >>  8) & 255;
+        this.#buf[pos + 2] = (val >>  0) & 255;
         return this;
     }
 
@@ -139,7 +153,7 @@ class SmfWriter {
 
         this.#writer.writeI16(0); // single track
         this.#writer.writeI16(1); // contains a single track
-        this.#writer.writeI16(96); // 96 per quarter-note
+        this.#writer.writeI16(1000); // 1000 per quarter-note == 1ms / unit
 
         this.#writer.writeI8(0x4D); // M
         this.#writer.writeI8(0x54); // T
@@ -164,25 +178,25 @@ class SmfWriter {
         this.#writer.writeI8(0xff);
         this.#writer.writeI8(0x51);
         this.#writer.writeI8(0x03);
-        this.#writer.writeI8(0x07);
-        this.#writer.writeI8(0xa1);
-        this.#writer.writeI8(0x20);
+        this.#writer.writeI24(1000000); // 100,000 == 60 bpm
 
         this.#writeResetData();
 
-        // Sample data
+        // // Sample data
 
-        // Note on
-        this.#writer.writeVar(0); // time
-        this.#writer.writeI8(90);
-        this.#writer.writeI8(48);
-        this.#writer.writeI8(96)
+        // // Note on
+        // for (let i = 0; i < 16; i++) {
+        //     this.#writer.writeVar(0); // time
+        //     this.#writer.writeI8(0x90);
+        //     this.#writer.writeI8(48);
+        //     this.#writer.writeI8(96)
 
-        // Note off
-        this.#writer.writeVar(192); // time
-        this.#writer.writeI8(80);
-        this.#writer.writeI8(48);
-        this.#writer.writeI8(64);
+        //     // Note off
+        //     this.#writer.writeVar(100); // time
+        //     this.#writer.writeI8(0x80);
+        //     this.#writer.writeI8(48);
+        //     this.#writer.writeI8(0);
+        // }
     }
 
     #writeResetData() {
