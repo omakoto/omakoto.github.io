@@ -9,8 +9,17 @@ function debug(...args) {
     console.log(...args);
 }
 
+const elStatus = $("#status");
+
 function info(...args) {
     console.log(...args);
+    let message = args.join(" ");
+
+
+    elStatus.text(message);
+    elStatus.show();
+    elStatus.delay(3000).hide(1000);
+
 }
 
 function w(value, callback) {

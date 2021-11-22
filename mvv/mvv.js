@@ -284,7 +284,7 @@ class MidiOutputManager {
         this.#device.send([176, 123, 0], 0); // All notes off
         this.#device.send([176, 121, 0], 0); // Reset all controllers
         this.#device.send([255], 0); // All reset
-        info("MIDI reset");
+        console.log("MIDI reset");
     }
 
     sendEvent(data, timestamp) {
@@ -481,7 +481,16 @@ class Recorder {
         this.stopPlaying();
         this.stopRecording();
         this.#events = events;
-        info("" + (events.length) + " events loaded.");
+
+        if (events.length == 0) {
+            info("File contains no events.");
+            return;
+        }
+
+        const lastEvent = events[events.length - 1];
+
+        let message = "Load completed: " + (lastEvent.timeStamp / 1000) + " seconds, " + events.length + " events";
+        info(message);
     }
 }
 
