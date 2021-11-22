@@ -12,6 +12,8 @@ const NOTES_COUNT = 128;
 const BAR_RATIO = 0.3; // Bar : Roll height
 const MARGIN = 0.005; // Margin at each side
 
+const FPS = 60;
+
 // Common values
 const RGB_BLACK = [0, 0, 0];
 
@@ -80,10 +82,16 @@ class Renderer {
     #ROLL_H;
     #MIN_NOTE = 21;
     #MAX_NOTE = 108;
+
     #cbar;
     #bar;
     #croll;
     #roll;
+
+    #cbar2;
+    #bar2;
+    #croll2;
+    #roll2;
 
     #frameCount = 0;
 
@@ -91,8 +99,8 @@ class Renderer {
         // Adjust CSS with the constants.
         $("body").css("padding", (MARGIN * 100) + "%");
         $("#canvases").css("width", (100 - MARGIN * 200) + "%");
-        $("#bar").css("height", (BAR_RATIO * 100) + "%");
-        $("#roll").css("height", (100 - BAR_RATIO * 100) + "%");
+        $("#bar2").css("height", (BAR_RATIO * 100) + "%");
+        $("#roll2").css("height", (100 - BAR_RATIO * 100) + "%");
 
         this.#W = s(screen.width * (1 - MARGIN * 2));
         this.#H = s(screen.height * (1 - MARGIN * 2));
@@ -108,14 +116,21 @@ class Renderer {
         this.#croll = document.getElementById("roll");
         this.#roll = this.#croll.getContext("2d", options);
 
+        this.#cbar2 = document.getElementById("bar2");
+        this.#bar2 = this.#cbar2.getContext("2d", options);
+
+        this.#croll2 = document.getElementById("roll2");
+        this.#roll2 = this.#croll2.getContext("2d", options);
+
         this.#cbar.width = this.#W;
         this.#cbar.height = this.#BAR_H;
+        this.#cbar2.width = this.#W;
+        this.#cbar2.height = this.#BAR_H;
 
         this.#croll.width = this.#W;
         this.#croll.height = this.#ROLL_H;
-
-        this.#roll.fillStyle = 'black';
-        this.#roll.fillRect(0, 0, this.#croll.width, this.#croll.height);
+        this.#croll2.width = this.#W;
+        this.#croll2.height = this.#ROLL_H;
     }
 
     getBarColor(velocity) {
@@ -199,6 +214,11 @@ class Renderer {
         // Base line.
         this.#bar.fillStyle = rgbToStr(this.#BAR_BASE_LINE_COLOR);
         this.#bar.fillRect(0, this.#BAR_H, this.#W, -this.#BAR_SUB_LINE_WIDTH)
+    }
+
+    flip() {
+        this.#bar2.drawImage(this.#cbar, 0, 0);
+        this.#roll2.drawImage(this.#croll, 0, 0);
     }
 
     toggleMute() {
@@ -504,8 +524,10 @@ class Coordinator {
     #now = 0;
     #nextSecond = 0;
     #frames = 0;
-    #timerTicks = 0;
+    #flips = 0;
+    #playbackTicks = 0;
     #efps;
+    #nextDrawTime;
 
     constructor() {
         this.#nextSecond = window.performance.now() + 1000;
@@ -642,9 +664,10 @@ class Coordinator {
         this.#frames++;
         let now = window.performance.now();
         if (now >= this.#nextSecond) {
-            this.#efps.text(this.#frames + "/" + this.#timerTicks);
+            this.#efps.text(this.#flips + "/" + this.#frames + "/" + this.#playbackTicks);
+            this.#flips = 0;
             this.#frames = 0;
-            this.#timerTicks = 0;
+            this.#playbackTicks = 0;
             this.#nextSecond += 1000;
         }
 
@@ -652,19 +675,40 @@ class Coordinator {
 
         renderer.onDraw(this.#now);
         midiRenderingStatus.afterDraw(this.#now);
-
-        Coordinator.scheduleOnDraw();
     }
 
-    static scheduleOnDraw() {
-        requestAnimationFrame(() => coordinator.onDraw())
+    scheduleFlip() {
+        requestAnimationFrame(() => {
+            this.#flips++;
+            renderer.flip();
+            this.scheduleFlip();
+        });
     }
 
-    onTimer() {
-        this.#timerTicks++;
+    onPlaybackTimer() {
+        this.#playbackTicks++;
         if (recorder.isPlaying) {
             recorder.playback();
         }
+    }
+
+    startDrawTimer() {
+        this.#nextDrawTime = window.performance.now();
+        this.#scheduleDraw();
+    }
+
+    #scheduleDraw() {
+        this.#nextDrawTime += (1000.0 / FPS);
+        const delay = (this.#nextDrawTime - window.performance.now());
+        // console.log(delay);
+        setTimeout(() => {
+            this.onDraw(); // TODO Handle frame drop properly
+            this.#scheduleDraw();
+        }, delay);
+    }
+
+    startPlaybackTimer() {
+        setInterval(() => coordinator.onPlaybackTimer(), 5);
     }
 
     #download() {
@@ -710,8 +754,9 @@ function onMIDIFailure() {
     alert('Could not access your MIDI devices.');
 }
 
-setInterval(() => coordinator.onTimer(), 5);
-Coordinator.scheduleOnDraw();
+coordinator.startPlaybackTimer();
+coordinator.startDrawTimer();
+coordinator.scheduleFlip();
 navigator.requestMIDIAccess()
     .then(onMIDISuccess, onMIDIFailure);
 $(window).keydown((ev) => coordinator.onKeyDown(ev));

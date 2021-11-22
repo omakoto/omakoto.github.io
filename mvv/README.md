@@ -12,7 +12,7 @@
   - `Left`/`Right` during playback -- Rewind/Fast-forward
 - `S` Save the last recording as a midi file
 - `L` Load a saved midi file
-- `F` Show FPS and playback timer ticks/second
+- `F` Show FPS and playback timer resolution.
 
 ## Supported midi events
 
@@ -26,4 +26,5 @@
 - [ ] Support loading a *.mid file
   - [X] Support self-created mid files
   - [ ] Support other mid files
-- [ ] Constant scroll speed regardless of FPS
+- [X] Constant scroll speed regardless of FPS
+  - It should be mostly fixed with double-buffering now, as long as updating the hidden buffer finishes within 16 ms.
