@@ -270,6 +270,16 @@ function downloadMidi(blob, filename) {
     };
 }
 
+function loadMidi(file) {
+    const reader = new FileReader();
+    reader.onload = function (event) {
+        const ar = new Uint8Array(event.target.result);
+        console.log("Read from file", file, "data", ar);
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+
 // For manual testing
 function t() {
     (new SmfWriter()).download();

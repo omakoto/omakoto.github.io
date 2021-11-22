@@ -707,3 +707,14 @@ $(window).on('unload', () => {
     coordinator.close();
 });
 
+$("body").on("dragover", function(ev) {
+    ev.preventDefault();
+    // ev.originalEvent.dataTransfer.dropEffect = 'copy';
+});
+
+$("body").on("drop", function(ev) {
+    ev.preventDefault();
+    console.log("File dropped", ev.originalEvent.dataTransfer.files[0], ev.originalEvent.dataTransfer);
+    const file = ev.originalEvent.dataTransfer.files[0];
+    loadMidi(file);
+});
