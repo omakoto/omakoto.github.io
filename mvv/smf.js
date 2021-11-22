@@ -246,9 +246,7 @@ class SmfReader {
             0, 0, // single track
             0, 1, // only one track
         ]);
-        if (this.#reader.readU16() != TICKS_PER_SECOND) {
-            this.#onInvalidFormat();
-        }
+        this.#ensureU16(TICKS_PER_SECOND);
         this.#ensureU8Array([
             0x4D, // MTrk
             0x54,
@@ -437,12 +435,17 @@ function downloadMidi(blob, filename) {
     };
 }
 
-function loadMidi(file, callback) {
+function loadMidi(file, callback, onFailure) {
     const reader = new FileReader();
     reader.onload = function (event) {
         const ar = new Uint8Array(event.target.result);
         console.log("Read from file", file);
-        callback((new SmfReader(ar)).getEvents());
+
+        try {
+            callback((new SmfReader(ar)).getEvents());
+        } catch (error) {
+            if (onFailure) onFailure(error);
+        }
     };
     reader.readAsArrayBuffer(file);
 }

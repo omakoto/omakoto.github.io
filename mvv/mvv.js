@@ -533,6 +533,9 @@ class Coordinator {
             case 83: // S
                 recorder.download();
                 break;
+            case 76: // L
+                $('#open_file').trigger('click');
+                break;
             case 32: // Space
                 this.togglePlayback();
                 break;
@@ -698,11 +701,22 @@ $("body").on("dragover", function(ev) {
     // ev.originalEvent.dataTransfer.dropEffect = 'copy';
 });
 
+function loadMidiFile(file) {
+    info("loading from: " + file.name);
+    loadMidi(file, (events) => {
+        recorder.setEvents(events);
+    }, (error) => {
+        info("Failed loading from " + file.name + ": " + error);
+    });
+}
+
 $("body").on("drop", function(ev) {
     ev.preventDefault();
     console.log("File dropped", ev.originalEvent.dataTransfer.files[0], ev.originalEvent.dataTransfer);
-    const file = ev.originalEvent.dataTransfer.files[0];
-    loadMidi(file, (events) => {
-        recorder.setEvents(events);
-    });
+    loadMidiFile(ev.originalEvent.dataTransfer.files[0]);
+});
+
+$("#open_file").on("change", (ev) => {
+    console.log("File selected", ev);
+    loadMidiFile(ev.target.files[0]);
 });
