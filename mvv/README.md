@@ -1,4 +1,4 @@
-# MVV -- MIDI Velocity visualizer
+# MVV — MIDI Velocity Visualizer
 
 ## Synopsys
 
