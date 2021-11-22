@@ -778,6 +778,7 @@ function loadMidiFile(file) {
         recorder.setEvents(events);
     }).catch((error) => {
         info("Failed loading from " + file.name + ": " + error);
+        console.log(error);
     });
 }
 

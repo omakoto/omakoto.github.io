@@ -183,6 +183,14 @@ class BytesReader {
             ret <<= 7;
         }
     }
+
+    skip(nbytes) {
+        this.#pos += nbytes;
+    }
+
+    startOver() {
+        this.#pos = 0;
+    }
 }
 
 // Converts "ticks" (not delta ticks, but absolute ticks) in a midi file to milliseconds.
@@ -241,8 +249,9 @@ class TickConverter {
     }
 }
 
-
-
+function hex8(v) {
+    return v.toString(16); // TODO pad-0
+}
 
 class SmfReader {
     #reader;
@@ -284,11 +293,18 @@ class SmfReader {
         ar.forEach((v) => this.#ensureU8(v));
     }
 
+    #withReader(callback) {
+        callback(this.#reader);
+    }
+
     #load() {
         if (this.#events) {
             return;
         }
         this.#events = [];
+
+        this.#loadBetter();
+        this.#reader.startOver();
 
         console.log("Parsing a midi file...");
 
@@ -357,6 +373,98 @@ class SmfReader {
             }
         }
         console.log("Done parsing.");
+    }
+
+    // Better SMF parser
+    #loadBetter() {
+        console.log("Parsing a midi file with a new parser...");
+        this.#ensureU32(0x4d546864); // MIDI header
+        this.#ensureU32(6) // Header length
+
+        this.#withReader((rd) => {
+            // Parse MIDI header.
+            const type = rd.readU16();
+            if (type > 2) {
+                throw "Invalid file format: " + type;
+            }
+            const numTracks = rd.readU16();
+            const ticksPerBeat = rd.readU16();
+
+            console.log("Type", type, "numTracks", numTracks, "ticksPerBeat", ticksPerBeat);
+
+            // Track start
+            let track = 0;
+            for (;;) {
+                if (track >= numTracks) {
+                    break;
+                }
+                track++;
+                this.#ensureU32(0x4d54726B); // Track header
+                const trackLen = rd.readU32();
+
+                console.log("Track #", track, "len", trackLen);
+
+                let lastStatus = 0;
+                let tick = 0;
+                for (;;) {
+                    const delta = rd.readVar();
+                    const status = rd.readU8();
+
+                    tick += delta;
+
+                    // META message?
+                    if (status == 0xff) {
+                        const type = rd.readU8();
+                        const len = rd.readVar();
+
+                        // console.log("        Meta 0x" + hex8(type) + " len=" + len);
+                        if (type == 0x2f) {
+                            // end of track
+                            break;
+                        }
+                        if (type == 0x51) {
+                            // tempo
+                            const tempo = rd.readU24();
+                            console.log("  @" + tick + " Tempo=" + tempo);
+                            continue;
+                        }
+                        // console.log("        [ignored]");
+                        rd.skip(len);
+                        continue;
+                    }
+                    // SysEX?
+                    if (status == 0xf0 || status == 0xf7) {
+                        const len = rd.readVar();
+                        rd.skip(len);
+                        continue;
+                    }
+
+                    let data1;
+                    if (status >= 0x80) {
+                        data1 = rd.readU8();
+                    } else {
+                        data1 = status;
+                        status = lastStatus;
+                    }
+                    lastStatus = status;
+
+                    const statusType = status & 0xf0;
+                    const channel = status & 0x0f;
+
+                    let data2 = 0;
+                    switch (statusType) {
+                        case 0x80: // note off
+                        case 0x90: // note on
+                        case 0xa0: // after touch
+                        case 0xb0: // control change
+                        case 0xe0: // pitch wheel
+                            data2 = rd.readU8();
+                            break;
+                    }
+                }
+            }
+        });
+        console.log("Done parsing")
     }
 }
 
