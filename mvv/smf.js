@@ -12,6 +12,24 @@ function logBlob(blob) {
     return blob;
 }
 
+class MidiEvent {
+    constructor(timeStamp, data, device) {
+        this.timeStamp = timeStamp;
+        this.data = data;
+        this.device = device ? device : "unknown-device";
+    }
+
+    static fromNativeEvent(e) {
+        return new MidiEvent(e.timeStamp, e.data, e.currentTarget.name);
+    }
+
+    withTimestamp(timeStamp) {
+        return new MidiEvent(timeStamp, this.data, this.device);
+    }
+}
+
+const TICKS_PER_SECOND = 1000;
+
 class BytesWriter {
     #cap = 2; // 1024 * 32;
     #size = 0;
@@ -127,12 +145,161 @@ class BytesWriter {
 }
 
 class BytesReader {
-    constructor() {
+    #buffer;
+    #pos = 0;
+
+    constructor(ar) {
+        this.#buffer = new Uint8Array(ar);
+    }
+
+    readU8() {
+        return this.#buffer[this.#pos++];
+    }
+
+    readU16() {
+        return (this.readU8() << 8) + this.readU8();;
+    }
+
+    readU24() {
+        return (this.readU16() << 8) + this.readU8();;
+    }
+
+    readU32() {
+        return (this.readU16() << 16) + this.readU16();;
+    }
+
+    getPos() {
+        return this.#pos;
+    }
+
+    readVar() {
+        let ret = 0;
+        for (;;) {
+            let v = this.readU8();
+            ret += (v & 0x7f);
+            if (v < 128) {
+                return ret;
+            }
+            ret <<= 7;
+        }
     }
 }
 
 class SmfReader {
-    constructor() {
+    #reader;
+    #events;
+
+    constructor(ar) {
+        this.#reader = new BytesReader(ar);
+    }
+
+    getEvents() {
+        this.#load();
+        return this.#events;
+    }
+
+    #onInvalidFormat() {
+        throw 'Unexpected byte found near index ' +
+                (this.#reader.getPos() - 1);
+    }
+
+    #ensureU8(v) {
+        if (this.#reader.readU8() != v) {
+            this.#onInvalidFormat();
+        }
+    }
+
+    #ensureU16(v) {
+        if (this.#reader.readU16() != v) {
+            this.#onInvalidFormat();
+        }
+    }
+
+    #ensureU32(v) {
+        if (this.#reader.readU32() != v) {
+            this.#onInvalidFormat();
+        }
+    }
+
+    #ensureU8Array(ar) {
+        ar.forEach((v) => this.#ensureU8(v));
+    }
+
+    #load() {
+        if (this.#events) {
+            return;
+        }
+        this.#events = [];
+
+        console.log("Parsing a midi file...");
+
+        // For now, support only files written by MVV.
+
+        this.#ensureU8Array([
+            0x4D, // MThd
+            0x54,
+            0x68,
+            0x64,
+
+            0, 0, 0, 6, // Header length
+
+            0, 0, // single track
+            0, 1, // only one track
+        ]);
+        if (this.#reader.readU16() != TICKS_PER_SECOND) {
+            this.#onInvalidFormat();
+        }
+        this.#ensureU8Array([
+            0x4D, // MTrk
+            0x54,
+            0x72,
+            0x6B,
+        ]);
+        const trackSize = this.#reader.readU32();
+
+        debug("Track size", trackSize);
+
+        let lastStatus = 0;
+        let totalTime = 0;
+        for (;;) {
+            const time = this.#reader.readVar();
+            totalTime += time;
+
+            const status = this.#reader.readU8();
+            debug("Status 0x" + status.toString(16) + " at t=" + totalTime);
+
+            if (status == 0xff) {
+                let type = this.#reader.readU8();
+                let len = this.#reader.readVar();
+
+                debug("Type 0x" + type.toString(16) + " len=" + len);
+
+                if (type == 0x2f) { // End of track
+                    break;
+                } else if (type == 0x51) { // Tempo
+                    if (len != 3) {
+                        this.#onInvalidFormat();
+                    }
+                    const tempo = this.#reader.readU24();
+                    debug("Tempo=" + tempo);
+                    if (tempo != 1000000) {
+                        this.#onInvalidFormat();
+                    }
+                } else {
+                    for (let i = 0; i < len; i++) {
+                        this.#reader.readU8();
+                    }
+                }
+            } else {
+                // TODO Running status
+                const d1 = this.#reader.readU8();
+                const d2 = this.#reader.readU8();
+
+                let ev = new MidiEvent(totalTime, [status, d1, d2]);
+                this.#events.push(ev);
+            }
+        }
+        console.log("Done parsing.");
     }
 }
 
@@ -158,7 +325,7 @@ class SmfWriter {
 
             w.writeU16(0); // single track
             w.writeU16(1); // contains a single track
-            w.writeU16(1000); // 1000 per quarter-note == 1ms / unit
+            w.writeU16(TICKS_PER_SECOND); // 1000 per quarter-note == 1ms / unit
 
             w.writeU8(0x4D); // M
             w.writeU8(0x54); // T
@@ -242,7 +409,7 @@ class SmfWriter {
     }
 
     writeMessage(deltaTimeMs, data) {
-        this.#writer.writeVar(deltaTimeMs);
+        this.#writer.writeVar(deltaTimeMs / (1000 / TICKS_PER_SECOND));
         for (let i = 0; i < data.length; i++) {
             this.#writer.writeU8(data[i]);
         }
@@ -274,7 +441,8 @@ function loadMidi(file) {
     const reader = new FileReader();
     reader.onload = function (event) {
         const ar = new Uint8Array(event.target.result);
-        console.log("Read from file", file, "data", ar);
+        console.log("Read from file", file);
+        (new SmfReader(ar)).getEvents();
     };
     reader.readAsArrayBuffer(file);
 }

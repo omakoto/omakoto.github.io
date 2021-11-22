@@ -3,15 +3,10 @@
 // and window.screen.{width,height{
 
 
-const DEBUG = parseInt((new URLSearchParams(window.location.search)).get("debug")) ? true : false;
 const SCALE_ARG = parseFloat("0" + (new URLSearchParams(window.location.search)).get("scale"));
 const SCALE = SCALE_ARG > 0 ? SCALE_ARG : window.devicePixelRatio;
 console.log("Scale: " + SCALE);
 const NOTES_COUNT = 128;
-
-if (!DEBUG) {
-    console.log("Debug log is disabled. Use ?debug=1 to enable debug log.");
-}
 
 // We set some styles in JS.
 const BAR_RATIO = 0.3; // Bar : Roll height
@@ -63,15 +58,6 @@ function rgbToStr(rgb) {
     return 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
 }
 
-function debug(...args) {
-    if (!DEBUG) return;
-    console.log(...args);
-}
-
-function info(...args) {
-    console.log(...args);
-}
-
 // Return the current time in "yyyy-mm-dd-hh-mm-ss.mmm" format, which is used for
 // midi filenames.
 function getCurrentTime() {
@@ -82,22 +68,6 @@ function getCurrentTime() {
 }
 
 // Logic
-
-class MidiEvent {
-    constructor(timeStamp, data, device) {
-        this.timeStamp = timeStamp;
-        this.data = data;
-        this.device = device ? device : "unknown-device";
-    }
-
-    static fromNativeEvent(e) {
-        return new MidiEvent(e.timeStamp, e.data, e.currentTarget.name);
-    }
-
-    withTimestamp(timeStamp) {
-        return new MidiEvent(timeStamp, this.data, this.device);
-    }
-}
 
 class Renderer {
     #BAR_SUB_LINE_WIDTH = s(2);
