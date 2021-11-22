@@ -18,7 +18,7 @@ function info(...args) {
 
     elStatus.text(message);
     elStatus.show();
-    elStatus.delay(3000).hide(1000);
+    elStatus.delay(3000).fadeOut(1000);
 
 }
 
