@@ -143,83 +143,93 @@ class SmfWriter {
 
     #closed = false;
 
+    #withWriter(callback) {
+        callback(this.#writer);
+    }
+
     constructor() {
-        this.#writer.writeU8(0x4D); // M
-        this.#writer.writeU8(0x54); // T
-        this.#writer.writeU8(0x68); // h
-        this.#writer.writeU8(0x64); // d
+        this.#withWriter((w) => {
+            w.writeU8(0x4D); // M
+            w.writeU8(0x54); // T
+            w.writeU8(0x68); // h
+            w.writeU8(0x64); // d
 
-        this.#writer.writeU32(6); // header length
+            w.writeU32(6); // header length
 
-        this.#writer.writeU16(0); // single track
-        this.#writer.writeU16(1); // contains a single track
-        this.#writer.writeU16(1000); // 1000 per quarter-note == 1ms / unit
+            w.writeU16(0); // single track
+            w.writeU16(1); // contains a single track
+            w.writeU16(1000); // 1000 per quarter-note == 1ms / unit
 
-        this.#writer.writeU8(0x4D); // M
-        this.#writer.writeU8(0x54); // T
-        this.#writer.writeU8(0x72); // r
-        this.#writer.writeU8(0x6B); // k
+            w.writeU8(0x4D); // M
+            w.writeU8(0x54); // T
+            w.writeU8(0x72); // r
+            w.writeU8(0x6B); // k
 
-        this.#trackLengthPos = this.#writer.getSize();
-        this.#writer.writeU32(0); // Track length
+            this.#trackLengthPos = w.getSize();
+            w.writeU32(0); // Track length
 
-        // Time signature
-        this.#writer.writeVar(0); // time
-        this.#writer.writeU8(0xff);
-        this.#writer.writeU8(0x58);
-        this.#writer.writeU8(0x04);
-        this.#writer.writeU8(0x04);
-        this.#writer.writeU8(0x02);
-        this.#writer.writeU8(0x18);
-        this.#writer.writeU8(0x08);
+            // Time signature
+            w.writeVar(0); // time
+            w.writeU8(0xff);
+            w.writeU8(0x58);
+            w.writeU8(0x04);
+            w.writeU8(0x04);
+            w.writeU8(0x02);
+            w.writeU8(0x18);
+            w.writeU8(0x08);
 
-        // tempo
-        this.#writer.writeVar(0); // time
-        this.#writer.writeU8(0xff);
-        this.#writer.writeU8(0x51);
-        this.#writer.writeU8(0x03);
-        this.#writer.writeU24(1000000); // 100,000 == 60 bpm
+            // tempo
+            w.writeVar(0); // time
+            w.writeU8(0xff);
+            w.writeU8(0x51);
+            w.writeU8(0x03);
+            w.writeU24(1000000); // 100,000 == 60 bpm
 
-        this.#writeResetData();
+            this.#writeResetData();
+        });
     }
 
     #writeResetData() {
-        // All notes off
-        this.#writer.writeVar(0); // time
-        this.#writer.writeU8(0xb0);
-        this.#writer.writeU8(123);
-        this.#writer.writeU8(0);
+        this.#withWriter((w) => {
+            // All notes off
+            w.writeVar(0); // time
+            w.writeU8(0xb0);
+            w.writeU8(123);
+            w.writeU8(0);
 
-        // Reset all controllers
-        this.#writer.writeVar(0); // time
-        this.#writer.writeU8(0xb0);
-        this.#writer.writeU8(121);
-        this.#writer.writeU8(0);
+            // Reset all controllers
+            w.writeVar(0); // time
+            w.writeU8(0xb0);
+            w.writeU8(121);
+            w.writeU8(0);
 
-        // Set channel volume
-        this.#writer.writeVar(0); // time
-        this.#writer.writeU8(0xb0);
-        this.#writer.writeU8(7);
-        this.#writer.writeU8(127);
+            // Set channel volume
+            w.writeVar(0); // time
+            w.writeU8(0xb0);
+            w.writeU8(7);
+            w.writeU8(127);
 
-        // // All reset
-        // TODO: Hmm, 0xFF conflicts with meta event header, so we can't use it?
-        // this.#writer.writeVar(0); // time
-        // this.#writer.writeU8(255);
+            // // All reset
+            // TODO: Hmm, 0xFF conflicts with meta event header, so we can't use it?
+            // w.writeVar(0); // time
+            // w.writeU8(255);
+        });
     }
 
     close() {
         if (this.#closed) {
             return;
         }
-        // end of track
-        this.#writer.writeVar(0); // time
-        this.#writer.writeU8(0xff);
-        this.#writer.writeU8(0x2f);
-        this.#writer.writeU8(0x00);
+        this.#withWriter((w) => {
+            // end of track
+            w.writeVar(0); // time
+            w.writeU8(0xff);
+            w.writeU8(0x2f);
+            w.writeU8(0x00);
 
-        let pos = this.#writer.getSize();
-        this.#writer.setU32(this.#trackLengthPos, pos - this.#trackLengthPos - 4);
+            let pos = w.getSize();
+            w.setU32(this.#trackLengthPos, pos - this.#trackLengthPos - 4);
+        });
     }
 
     getBlob() {
