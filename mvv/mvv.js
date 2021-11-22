@@ -412,7 +412,7 @@ class Recorder {
             this.#playbackTimeAdjustment = 0;
               ts = -1; // Special case: Move before the first note.
         }
-        info("New playback timestamp: " + ts);
+        info("New playback timestamp: " + int(ts / 1000));
 
         // Find the next play event index.
         this.#nextPlaybackIndex = 0;
