@@ -621,6 +621,13 @@ class Coordinator {
         }
     }
 
+    reset() {
+        recorder.stopPlaying();
+        recorder.stopRecording();
+        this.#updateRecorderStatus();
+        this.resetMidi();
+    }
+
     resetMidi() {
         midiRenderingStatus.reset();
         midiOutputManager.reset();
@@ -703,6 +710,7 @@ $("body").on("dragover", function(ev) {
 
 function loadMidiFile(file) {
     info("loading from: " + file.name);
+    coordinator.reset();
     loadMidi(file).then((events) => {
         recorder.setEvents(events);
     }).catch((error) => {
