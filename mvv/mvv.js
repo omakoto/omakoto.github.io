@@ -476,6 +476,13 @@ class Recorder {
         });
         wr.download("mvv-" + getCurrentTime() + ".mid");
     }
+
+    setEvents(events) {
+        this.stopPlaying();
+        this.stopRecording();
+        this.#events = events;
+        info("" + (events.length) + " events loaded.");
+    }
 }
 
 const recorder = new Recorder();
@@ -686,5 +693,7 @@ $("body").on("drop", function(ev) {
     ev.preventDefault();
     console.log("File dropped", ev.originalEvent.dataTransfer.files[0], ev.originalEvent.dataTransfer);
     const file = ev.originalEvent.dataTransfer.files[0];
-    loadMidi(file);
+    loadMidi(file, (events) => {
+        recorder.setEvents(events);
+    });
 });

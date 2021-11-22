@@ -23,6 +23,6 @@
 - [ ] Add help
 - [ ] Support non-zero channels
 - [ ] Support loading a *.mid file
-  - [ ] Support self-created mid files
+  - [X] Support self-created mid files
   - [ ] Support other mid files
 - [ ] Constant scroll speed regardless of FPS

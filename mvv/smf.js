@@ -437,12 +437,12 @@ function downloadMidi(blob, filename) {
     };
 }
 
-function loadMidi(file) {
+function loadMidi(file, callback) {
     const reader = new FileReader();
     reader.onload = function (event) {
         const ar = new Uint8Array(event.target.result);
         console.log("Read from file", file);
-        (new SmfReader(ar)).getEvents();
+        callback((new SmfReader(ar)).getEvents());
     };
     reader.readAsArrayBuffer(file);
 }
