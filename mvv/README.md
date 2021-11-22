@@ -10,7 +10,8 @@
 - `R` Record start/stop
 - `SPACE` Playback start/stop
   - `Left`/`Right` during playback -- Rewind/Fast-forward
-- `S` Save the last recording
+- `S` Save the last recording as a midi file
+- `L` Load a saved midi file
 - `F` Show FPS and playback timer ticks/second
 
 ## Supported midi events
