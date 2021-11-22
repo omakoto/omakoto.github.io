@@ -64,7 +64,7 @@ function getCurrentTime() {
     const nowUtc = new Date();
     const nowLocal = new Date(nowUtc.getTime() - (nowUtc.getTimezoneOffset() * 60 * 1000));
     let ret = nowLocal.toISOString();
-    return ret.replace("Z", "").replaceAll(/[:T]/g, "-");
+    return ret.replace("Z", "").replaceAll(/[:T]/g, "-").replace(/\..*$/, "");
 }
 
 // Logic
@@ -457,7 +457,11 @@ class Recorder {
         }
     }
 
-    download() {
+    isAnythingRecorded() {
+        return this.#events.length > 0;
+    }
+
+    download(filename) {
         if (this.#events.length == 0) {
             alert("Nothing recorded yet");
             console.log("Nothing recorded.");
@@ -474,7 +478,7 @@ class Recorder {
             wr.writeMessage(delta, ev.data);
             lastTimestamp = ev.timeStamp;
         });
-        wr.download("mvv-" + getCurrentTime() + ".mid");
+        wr.download(filename);
     }
 
     setEvents(events) {
@@ -531,7 +535,7 @@ class Coordinator {
                 this.toggleRecording();
                 break;
             case 83: // S
-                recorder.download();
+            this.#download();
                 break;
             case 76: // L
                 $('#open_file').trigger('click');
@@ -661,6 +665,20 @@ class Coordinator {
         if (recorder.isPlaying) {
             recorder.playback();
         }
+    }
+
+    #download() {
+        if (!recorder.isAnythingRecorded()) {
+            info("Nothing is recorded");
+            return;
+        }
+        let filename = "mvv-" + getCurrentTime();
+        filename = prompt("Save filename?", filename);
+        if (!filename) {
+            info("Save canceled");
+            return;
+        }
+        recorder.download(filename + ".mid");
     }
 
     close() {
