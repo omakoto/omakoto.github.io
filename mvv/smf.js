@@ -299,75 +299,79 @@ class SmfReader {
         if (true) {
             this.#loadBetter();
         } else {
-            // Old parser that can only read self-created MIDI files.
-            console.log("Parsing a midi file...");
+            this.#loadOld();
+        }
+    }
 
-            // For now, support only files written by MVV.
+    #loadOld() {
+        // Old parser that can only read self-created MIDI files.
+        console.log("Parsing a midi file...");
 
-            this.#ensureU8Array([
-                0x4D, // MThd
-                0x54,
-                0x68,
-                0x64,
+        // For now, support only files written by MVV.
 
-                0, 0, 0, 6, // Header length
+        this.#ensureU8Array([
+            0x4D, // MThd
+            0x54,
+            0x68,
+            0x64,
 
-                0, 0, // single track
-                0, 1, // only one track
-            ]);
-            this.#ensureU16(TICKS_PER_SECOND);
-            this.#ensureU8Array([
-                0x4D, // MTrk
-                0x54,
-                0x72,
-                0x6B,
-            ]);
-            const trackSize = this.#reader.readU32();
+            0, 0, 0, 6, // Header length
 
-            debug("Track size", trackSize);
+            0, 0, // single track
+            0, 1, // only one track
+        ]);
+        this.#ensureU16(TICKS_PER_SECOND);
+        this.#ensureU8Array([
+            0x4D, // MTrk
+            0x54,
+            0x72,
+            0x6B,
+        ]);
+        const trackSize = this.#reader.readU32();
 
-            let lastStatus = 0;
-            let totalTime = 0;
-            for (;;) {
-                const time = this.#reader.readVar();
-                totalTime += time;
+        debug("Track size", trackSize);
 
-                const status = this.#reader.readU8();
-                debug("Status 0x" + status.toString(16) + " at t=" + totalTime);
+        let lastStatus = 0;
+        let totalTime = 0;
+        for (;;) {
+            const time = this.#reader.readVar();
+            totalTime += time;
 
-                if (status == 0xff) {
-                    let type = this.#reader.readU8();
-                    let len = this.#reader.readVar();
+            const status = this.#reader.readU8();
+            debug("Status 0x" + status.toString(16) + " at t=" + totalTime);
 
-                    debug("Type 0x" + type.toString(16) + " len=" + len);
+            if (status == 0xff) {
+                let type = this.#reader.readU8();
+                let len = this.#reader.readVar();
 
-                    if (type == 0x2f) { // End of track
-                        break;
-                    } else if (type == 0x51) { // Tempo
-                        if (len != 3) {
-                            this.#onInvalidFormat();
-                        }
-                        const tempo = this.#reader.readU24();
-                        debug("Tempo=" + tempo);
-                        if (tempo != 1000000) {
-                            this.#onInvalidFormat();
-                        }
-                    } else {
-                        for (let i = 0; i < len; i++) {
-                            this.#reader.readU8();
-                        }
+                debug("Type 0x" + type.toString(16) + " len=" + len);
+
+                if (type == 0x2f) { // End of track
+                    break;
+                } else if (type == 0x51) { // Tempo
+                    if (len != 3) {
+                        this.#onInvalidFormat();
+                    }
+                    const tempo = this.#reader.readU24();
+                    debug("Tempo=" + tempo);
+                    if (tempo != 1000000) {
+                        this.#onInvalidFormat();
                     }
                 } else {
-                    // TODO Running status
-                    const d1 = this.#reader.readU8();
-                    const d2 = this.#reader.readU8();
-
-                    let ev = new MidiEvent(totalTime, [status, d1, d2]);
-                    this.#events.push(ev);
+                    for (let i = 0; i < len; i++) {
+                        this.#reader.readU8();
+                    }
                 }
+            } else {
+                // TODO Running status
+                const d1 = this.#reader.readU8();
+                const d2 = this.#reader.readU8();
+
+                let ev = new MidiEvent(totalTime, [status, d1, d2]);
+                this.#events.push(ev);
             }
-            console.log("Done parsing.");
         }
+        console.log("Done parsing.");
     }
 
     // Better SMF parser
@@ -384,6 +388,10 @@ class SmfReader {
             }
             const numTracks = rd.readU16();
             const ticksPerBeat = rd.readU16();
+
+            if (ticksPerBeat >= 0x8000) {
+                throw "SMPTE time format not supported"
+            }
 
             console.log("Type", type, "numTracks", numTracks, "ticksPerBeat", ticksPerBeat);
 
