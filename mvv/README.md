@@ -23,8 +23,8 @@
 
 - [ ] Add help
 - [ ] Support non-zero channels
-- [ ] Support loading a *.mid file
+- [X] Support loading a *.mid file
   - [X] Support self-created mid files
-  - [ ] Support other mid files
+  - [X] Support other mid files
 - [X] Constant scroll speed regardless of FPS
   - It should be mostly fixed with double-buffering now, as long as updating the hidden buffer finishes within 16 ms.

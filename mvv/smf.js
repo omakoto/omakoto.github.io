@@ -195,40 +195,33 @@ class BytesReader {
 
 // Converts "ticks" (not delta ticks, but absolute ticks) in a midi file to milliseconds.
 class TickConverter {
-    #ticksPerBeat = -1;
+    #ticksPerBeat;
 
     #tempos = [];
 
     #lastTempoEvent;
 
-    constructor() {
+    constructor(ticksPerBeat) {
+        this.#ticksPerBeat = ticksPerBeat;
+
+        // Arbitrary initial tempo
+        this.#lastTempoEvent = {
+            ticks: 0,
+            mspb: 500_000,
+            timeOffset: 0,
+        };
+        this.#tempos.push(this.#lastTempoEvent);
     }
 
     #ticksToMilliseconds(ticks, mspb) {
         return ((ticks / this.#ticksPerBeat) * mspb) / 1000;
     }
 
-    setTicksPerBeat(val) {
-        this.#ticksPerBeat = val;
-    }
-
     setTempo(ticks, microsecondsPerBeat) {
         const last = this.#lastTempoEvent;
-
-        // First tempo event must always be at tick 0
-        if (!last && ticks != 0) {
-            throw "First tempo event is not at time 0 (is at " + ticks + ")"
-        }
-        if (this.#ticksPerBeat == -1) {
-            throw "setTickPerBeat() not called yet"
-        }
-        let timeOffset = 0;
-        if (last) {
-            const deltaTicks = ticks - last.ticks;
-            const deltaTimeOffset = this.#ticksToMilliseconds(deltaTicks, last.mspb);
-
-            timeOffset = last.timeOffset + deltaTimeOffset;
-        }
+        const deltaTicks = ticks - last.ticks;
+        const deltaTimeOffset = this.#ticksToMilliseconds(deltaTicks, last.mspb);
+        const timeOffset = last.timeOffset + deltaTimeOffset;
 
         this.#lastTempoEvent = {ticks: ticks, mspb: microsecondsPerBeat, timeOffset: timeOffset};
 
@@ -245,7 +238,7 @@ class TickConverter {
 
             nearestTempo = t;
         }
-        return nearestTempo.timeOffset + this.#ticksToMilliseconds(nearestTempo.ticks - ticks, nearestTempo.mspb);
+        return nearestTempo.timeOffset + this.#ticksToMilliseconds(ticks - nearestTempo.ticks, nearestTempo.mspb);
     }
 }
 
@@ -303,76 +296,78 @@ class SmfReader {
         }
         this.#events = [];
 
-        this.#loadBetter();
-        this.#reader.startOver();
+        if (true) {
+            this.#loadBetter();
+        } else {
+            // Old parser that can only read self-created MIDI files.
+            console.log("Parsing a midi file...");
 
-        console.log("Parsing a midi file...");
+            // For now, support only files written by MVV.
 
-        // For now, support only files written by MVV.
+            this.#ensureU8Array([
+                0x4D, // MThd
+                0x54,
+                0x68,
+                0x64,
 
-        this.#ensureU8Array([
-            0x4D, // MThd
-            0x54,
-            0x68,
-            0x64,
+                0, 0, 0, 6, // Header length
 
-            0, 0, 0, 6, // Header length
+                0, 0, // single track
+                0, 1, // only one track
+            ]);
+            this.#ensureU16(TICKS_PER_SECOND);
+            this.#ensureU8Array([
+                0x4D, // MTrk
+                0x54,
+                0x72,
+                0x6B,
+            ]);
+            const trackSize = this.#reader.readU32();
 
-            0, 0, // single track
-            0, 1, // only one track
-        ]);
-        this.#ensureU16(TICKS_PER_SECOND);
-        this.#ensureU8Array([
-            0x4D, // MTrk
-            0x54,
-            0x72,
-            0x6B,
-        ]);
-        const trackSize = this.#reader.readU32();
+            debug("Track size", trackSize);
 
-        debug("Track size", trackSize);
+            let lastStatus = 0;
+            let totalTime = 0;
+            for (;;) {
+                const time = this.#reader.readVar();
+                totalTime += time;
 
-        let lastStatus = 0;
-        let totalTime = 0;
-        for (;;) {
-            const time = this.#reader.readVar();
-            totalTime += time;
+                const status = this.#reader.readU8();
+                debug("Status 0x" + status.toString(16) + " at t=" + totalTime);
 
-            const status = this.#reader.readU8();
-            debug("Status 0x" + status.toString(16) + " at t=" + totalTime);
+                if (status == 0xff) {
+                    let type = this.#reader.readU8();
+                    let len = this.#reader.readVar();
 
-            if (status == 0xff) {
-                let type = this.#reader.readU8();
-                let len = this.#reader.readVar();
+                    debug("Type 0x" + type.toString(16) + " len=" + len);
 
-                debug("Type 0x" + type.toString(16) + " len=" + len);
-
-                if (type == 0x2f) { // End of track
-                    break;
-                } else if (type == 0x51) { // Tempo
-                    if (len != 3) {
-                        this.#onInvalidFormat();
-                    }
-                    const tempo = this.#reader.readU24();
-                    debug("Tempo=" + tempo);
-                    if (tempo != 1000000) {
-                        this.#onInvalidFormat();
+                    if (type == 0x2f) { // End of track
+                        break;
+                    } else if (type == 0x51) { // Tempo
+                        if (len != 3) {
+                            this.#onInvalidFormat();
+                        }
+                        const tempo = this.#reader.readU24();
+                        debug("Tempo=" + tempo);
+                        if (tempo != 1000000) {
+                            this.#onInvalidFormat();
+                        }
+                    } else {
+                        for (let i = 0; i < len; i++) {
+                            this.#reader.readU8();
+                        }
                     }
                 } else {
-                    for (let i = 0; i < len; i++) {
-                        this.#reader.readU8();
-                    }
-                }
-            } else {
-                // TODO Running status
-                const d1 = this.#reader.readU8();
-                const d2 = this.#reader.readU8();
+                    // TODO Running status
+                    const d1 = this.#reader.readU8();
+                    const d2 = this.#reader.readU8();
 
-                let ev = new MidiEvent(totalTime, [status, d1, d2]);
-                this.#events.push(ev);
+                    let ev = new MidiEvent(totalTime, [status, d1, d2]);
+                    this.#events.push(ev);
+                }
             }
+            console.log("Done parsing.");
         }
-        console.log("Done parsing.");
     }
 
     // Better SMF parser
@@ -392,9 +387,12 @@ class SmfReader {
 
             console.log("Type", type, "numTracks", numTracks, "ticksPerBeat", ticksPerBeat);
 
+            const tc = new TickConverter(ticksPerBeat);
+
             // Track start
             let track = 0;
             for (;;) {
+                console.log("Current tick converter status:", tc);
                 if (track >= numTracks) {
                     break;
                 }
@@ -426,6 +424,7 @@ class SmfReader {
                             // tempo
                             const tempo = rd.readU24();
                             console.log("  @" + tick + " Tempo=" + tempo);
+                            tc.setTempo(tick, tempo);
                             continue;
                         }
                         // console.log("        [ignored]");
@@ -453,6 +452,9 @@ class SmfReader {
 
                     let data2 = 0;
                     switch (statusType) {
+                        case 0xc0: // program change
+                            // Ignore all program changes!
+                            continue;
                         case 0x80: // note off
                         case 0x90: // note on
                         case 0xa0: // after touch
@@ -461,6 +463,9 @@ class SmfReader {
                             data2 = rd.readU8();
                             break;
                     }
+                    let ev = new MidiEvent(tc.getTime(tick), [status, data1, data2]);
+                    // console.log(ev);
+                    this.#events.push(ev);
                 }
             }
         });
