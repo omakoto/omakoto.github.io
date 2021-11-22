@@ -435,19 +435,23 @@ function downloadMidi(blob, filename) {
     };
 }
 
-function loadMidi(file, callback, onFailure) {
-    const reader = new FileReader();
-    reader.onload = function (event) {
-        const ar = new Uint8Array(event.target.result);
-        console.log("Read from file", file);
+// Returns a promise
+function loadMidi(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            const ar = new Uint8Array(event.target.result);
+            console.log("Read from file", file);
 
-        try {
-            callback((new SmfReader(ar)).getEvents());
-        } catch (error) {
-            if (onFailure) onFailure(error);
-        }
-    };
-    reader.readAsArrayBuffer(file);
+            try {
+                resolve((new SmfReader(ar)).getEvents());
+            } catch (error) {
+                if (reject) reject(error);
+            }
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+    });
 }
 
 

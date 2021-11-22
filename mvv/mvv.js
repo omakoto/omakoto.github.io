@@ -703,9 +703,9 @@ $("body").on("dragover", function(ev) {
 
 function loadMidiFile(file) {
     info("loading from: " + file.name);
-    loadMidi(file, (events) => {
+    loadMidi(file).then((events) => {
         recorder.setEvents(events);
-    }, (error) => {
+    }).catch((error) => {
         info("Failed loading from " + file.name + ": " + error);
     });
 }
@@ -717,6 +717,10 @@ $("body").on("drop", function(ev) {
 });
 
 $("#open_file").on("change", (ev) => {
+    const file = ev.target.files[0];
+    if (!file) {
+        return; // canceled
+    }
     console.log("File selected", ev);
-    loadMidiFile(ev.target.files[0]);
+    loadMidiFile(file);
 });
