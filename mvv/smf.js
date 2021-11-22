@@ -185,6 +185,65 @@ class BytesReader {
     }
 }
 
+// Converts "ticks" (not delta ticks, but absolute ticks) in a midi file to milliseconds.
+class TickConverter {
+    #ticksPerBeat = -1;
+
+    #tempos = [];
+
+    #lastTempoEvent;
+
+    constructor() {
+    }
+
+    #ticksToMilliseconds(ticks, mspb) {
+        return ((ticks / this.#ticksPerBeat) * mspb) / 1000;
+    }
+
+    setTicksPerBeat(val) {
+        this.#ticksPerBeat = val;
+    }
+
+    setTempo(ticks, microsecondsPerBeat) {
+        const last = this.#lastTempoEvent;
+
+        // First tempo event must always be at tick 0
+        if (!last && ticks != 0) {
+            throw "First tempo event is not at time 0 (is at " + ticks + ")"
+        }
+        if (this.#ticksPerBeat == -1) {
+            throw "setTickPerBeat() not called yet"
+        }
+        let timeOffset = 0;
+        if (last) {
+            const deltaTicks = ticks - last.ticks;
+            const deltaTimeOffset = this.#ticksToMilliseconds(deltaTicks, last.mspb);
+
+            timeOffset = last.timeOffset + deltaTimeOffset;
+        }
+
+        this.#lastTempoEvent = {ticks: ticks, mspb: microsecondsPerBeat, timeOffset: timeOffset};
+
+        this.#tempos.push(this.#lastTempoEvent);
+    }
+
+    getTime(ticks) {
+        let nearestTempo;
+        for (let i = 0; i < this.#tempos.length; i++) {
+            const t = this.#tempos[i];
+            if (t.ticks > ticks) {
+                break;
+            }
+
+            nearestTempo = t;
+        }
+        return nearestTempo.timeOffset + this.#ticksToMilliseconds(nearestTempo.ticks - ticks, nearestTempo.mspb);
+    }
+}
+
+
+
+
 class SmfReader {
     #reader;
     #events;
