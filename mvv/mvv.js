@@ -432,7 +432,7 @@ class Recorder {
             this.#playbackTimeAdjustment = 0;
               ts = -1; // Special case: Move before the first note.
         }
-        info("New playback timestamp: " + int(ts / 1000));
+        info("New playback timestamp: " + (ts < 0 ? 0 : int(ts / 1000)));
 
         // Find the next play event index.
         this.#nextPlaybackIndex = 0;
@@ -461,9 +461,12 @@ class Recorder {
         for (;;) {
             if (this.#events.length <= this.#nextPlaybackIndex) {
                 // No more events.
-                this.#isPlaying = false;
-                coordinator.onPlaybackFinished();
-                return false;
+
+                // But do not auto-stop; otherwise it'd be hard to listen to the last part.
+                // this.#isPlaying = false;
+                // coordinator.onPlaybackFinished();
+                // return false;
+                return true;
             }
             let ev = this.#events[this.#nextPlaybackIndex];
             if (ev.timeStamp > timestamp) {

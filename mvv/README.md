@@ -28,3 +28,7 @@
   - [X] Support other mid files
 - [X] Constant scroll speed regardless of FPS
   - It should be mostly fixed with double-buffering now, as long as updating the hidden buffer finishes within 16 ms.
+- [] Show playback timestamp
+- Better playback
+  - [ ] Fast-forward should send all skipped control changes
+  - [ ] Rewind should replay all control changes
