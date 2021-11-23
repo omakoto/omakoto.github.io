@@ -432,7 +432,7 @@ class Recorder {
             this.#playbackTimeAdjustment = 0;
               ts = -1; // Special case: Move before the first note.
         }
-        info("New playback timestamp: " + (ts < 0 ? 0 : int(ts / 1000)));
+        // info("New playback timestamp: " + (ts < 0 ? 0 : int(ts / 1000)));
 
         // Find the next play event index.
         this.#nextPlaybackIndex = 0;
@@ -441,6 +441,16 @@ class Recorder {
 
     #getCurrentPlaybackTimestamp() {
         return (window.performance.now() - this.#playbackStartTimestamp) + this.#playbackTimeAdjustment;
+    }
+
+    getHumanReadableCurrentPlaybackTimestamp() {
+        const totalSeconds = int(this.#getCurrentPlaybackTimestamp() / 1000);
+        if (totalSeconds <= 0) {
+            return "0:00";
+        }
+        const minutes = int(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return minutes + ":" + (seconds < 10 ? "0" + seconds : seconds);
     }
 
     playback() {
@@ -692,6 +702,7 @@ class Coordinator {
         this.#playbackTicks++;
         if (recorder.isPlaying) {
             recorder.playback();
+            infoRaw(recorder.getHumanReadableCurrentPlaybackTimestamp());
         }
     }
 

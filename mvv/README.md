@@ -11,7 +11,7 @@
 - `SPACE` Playback start/stop
   - `Left`/`Right` during playback -- Rewind/Fast-forward
 - `S` Save the last recording as a midi file
-- `L` Load a saved midi file
+- `L` Load a `*.mid` file
 - `F` Show FPS and playback timer resolution.
 
 ## Supported midi events
@@ -28,7 +28,7 @@
   - [X] Support other mid files
 - [X] Constant scroll speed regardless of FPS
   - It should be mostly fixed with double-buffering now, as long as updating the hidden buffer finishes within 16 ms.
-- [] Show playback timestamp
+- [X] Show playback timestamp
 - Better playback
   - [ ] Fast-forward should send all skipped control changes
   - [ ] Rewind should replay all control changes

@@ -19,7 +19,13 @@ function info(...args) {
     elStatus.text(message);
     elStatus.show();
     elStatus.delay(3000).fadeOut(1000);
+}
 
+function infoRaw(...args) {
+    let message = args.join(" ");
+
+    elStatus.show();
+    elStatus.text(message);
 }
 
 function w(value, callback) {
