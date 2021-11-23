@@ -22,6 +22,7 @@
 ## Bugs/TODOs
 
 - [ ] Add help
+- [ ] Keep playing while in the BG too (use a Worker?)
 - [ ] Support pausing
 - [ ] Support non-zero channels
 - [X] Support loading a *.mid file
