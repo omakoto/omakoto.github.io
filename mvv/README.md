@@ -22,7 +22,8 @@
 ## Bugs/TODOs
 
 - [ ] Add help
-- [ ] Keep playing while in the BG too (use a Worker?)
+- [X] Keep playing while in the BG too
+- [ ] Don't use `prompt()` (which stops playback)
 - [ ] Support pausing
 - [ ] Support non-zero channels
 - [X] Support loading a *.mid file
