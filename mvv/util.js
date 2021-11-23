@@ -12,18 +12,14 @@ function debug(...args) {
 const elStatus = $("#status");
 
 function info(...args) {
-    console.log(...args);
-    let message = args.join(" ");
-
-
-    elStatus.text(message);
-    elStatus.show();
+    infoRaw(args);
     elStatus.delay(3000).fadeOut(1000);
 }
 
 function infoRaw(...args) {
     let message = args.join(" ");
 
+    elStatus.stop(true, true);
     elStatus.show();
     elStatus.text(message);
 }

@@ -443,14 +443,23 @@ class Recorder {
         return (window.performance.now() - this.#playbackStartTimestamp) + this.#playbackTimeAdjustment;
     }
 
+    #getHumanReadableCurrentPlaybackTimestamp_lastTotalSeconds = -1;
+    #getHumanReadableCurrentPlaybackTimestamp_lastResult;
+
     getHumanReadableCurrentPlaybackTimestamp() {
         const totalSeconds = int(this.#getCurrentPlaybackTimestamp() / 1000);
         if (totalSeconds <= 0) {
             return "0:00";
         }
+        if (totalSeconds == this.#getHumanReadableCurrentPlaybackTimestamp_lastTotalSeconds) {
+            return this.#getHumanReadableCurrentPlaybackTimestamp_lastResult;
+        }
         const minutes = int(totalSeconds / 60);
         const seconds = totalSeconds % 60;
-        return minutes + ":" + (seconds < 10 ? "0" + seconds : seconds);
+        this.#getHumanReadableCurrentPlaybackTimestamp_lastTotalSeconds = totalSeconds;
+        this.#getHumanReadableCurrentPlaybackTimestamp_lastResult =
+            minutes + ":" + (seconds < 10 ? "0" + seconds : seconds);
+        return this.#getHumanReadableCurrentPlaybackTimestamp_lastResult;
     }
 
     playback() {
@@ -698,11 +707,17 @@ class Coordinator {
         });
     }
 
+    #onPlaybackTimer_lastShownPlaybackTimestamp;
+
     onPlaybackTimer() {
         this.#playbackTicks++;
         if (recorder.isPlaying) {
             recorder.playback();
-            infoRaw(recorder.getHumanReadableCurrentPlaybackTimestamp());
+            const timestamp = recorder.getHumanReadableCurrentPlaybackTimestamp();
+            if (timestamp != this.#onPlaybackTimer_lastShownPlaybackTimestamp) {
+                infoRaw(timestamp);
+                this.#onPlaybackTimer_lastShownPlaybackTimestamp = timestamp;
+            }
         }
     }
 
