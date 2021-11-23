@@ -22,6 +22,7 @@
 ## Bugs/TODOs
 
 - [ ] Add help
+- [ ] Support pausing
 - [ ] Support non-zero channels
 - [X] Support loading a *.mid file
   - [X] Support self-created mid files
