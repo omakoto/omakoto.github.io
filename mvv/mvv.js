@@ -783,11 +783,27 @@ function onMIDIFailure() {
     alert('Could not access your MIDI devices.');
 }
 
-coordinator.startPlaybackTimer();
-coordinator.startDrawTimer();
+// coordinator.startPlaybackTimer();
+// coordinator.startDrawTimer();
 coordinator.scheduleFlip();
 
+const PLAYBACK_TIMER = "playbackTimer";
+const DRAW_TIMER = "drawTimer";
+
 const worker = new Worker("timer-worker.js");
+worker.onmessage = (e) => {
+    const data = e.data;
+    if (data == PLAYBACK_TIMER) {
+        coordinator.onPlaybackTimer();
+        return;
+    }
+    if (data == DRAW_TIMER) {
+        coordinator.onDraw();
+        return;
+    }
+};
+worker.postMessage({action: "setInterval", interval: 5, result: PLAYBACK_TIMER});
+worker.postMessage({action: "setInterval", interval: 1000.0 / FPS, result: DRAW_TIMER});
 
 navigator.requestMIDIAccess()
     .then(onMIDISuccess, onMIDIFailure);
