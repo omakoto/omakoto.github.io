@@ -6,9 +6,12 @@ onmessage = (e) => {
     if (data.action == "setInterval") {
         console.log("Setting timer with interval: " + data.interval + " ms, result:", data.result);
 
-        // TODO: Use setTimeout
-        setInterval(() => {
+        let next = performance.now();
+        const tick = () => {
+            next += data.interval;
             postMessage(data.result);
-        }, data.interval);
+            setTimeout(tick, next - performance.now());
+        };
+        tick();
     }
 };
