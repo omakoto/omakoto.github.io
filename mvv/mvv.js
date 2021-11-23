@@ -535,7 +535,7 @@ class Recorder {
 
         const lastEvent = events[events.length - 1];
 
-        let message = "Load completed: " + (lastEvent.timeStamp / 1000) + " seconds, " + events.length + " events";
+        let message = "Load completed: " + int(lastEvent.timeStamp / 1000) + " seconds, " + events.length + " events";
         info(message);
     }
 }
@@ -579,7 +579,7 @@ class Coordinator {
                 this.toggleRecording();
                 break;
             case 83: // S
-            this.#download();
+                this.#open_download_box();
                 break;
             case 76: // L
                 $('#open_file').trigger('click');
@@ -740,18 +740,34 @@ class Coordinator {
         setInterval(() => coordinator.onPlaybackTimer(), 5);
     }
 
-    #download() {
+    #save_as_box;
+
+    #open_download_box() {
         if (!recorder.isAnythingRecorded()) {
             info("Nothing is recorded");
             return;
         }
         let filename = "mvv-" + getCurrentTime();
-        filename = prompt("Save filename?", filename);
+        $('#save_as_filename').val(filename);
+        this.#save_as_box = new Popbox({
+            blur: true,
+            overlay: true,
+        });
+
+        this.#save_as_box.open('save_as_box');
+        $('#save_as_filename').focus();
+    }
+
+    do_download() {
+        this.#save_as_box.clear();
+        let filename = $('#save_as_filename').val();
         if (!filename) {
-            info("Save canceled");
+            info("Empty filename");
             return;
         }
-        recorder.download(filename + ".mid");
+        filename += ".mid";
+        recorder.download(filename);
+        info("Saved as " + filename);
     }
 
     close() {
@@ -802,7 +818,7 @@ worker.onmessage = (e) => {
         return;
     }
 };
-worker.postMessage({action: "setInterval", interval: 5, result: PLAYBACK_TIMER});
+worker.postMessage({action: "setInterval", interval: 10, result: PLAYBACK_TIMER});
 worker.postMessage({action: "setInterval", interval: 1000.0 / FPS, result: DRAW_TIMER});
 
 navigator.requestMIDIAccess()
@@ -843,4 +859,21 @@ $("#open_file").on("change", (ev) => {
     }
     console.log("File selected", ev);
     loadMidiFile(file);
+});
+
+$("#save_as_filename").keydown((ev) => {
+    console.log(ev);
+    ev.stopPropagation();
+    if (ev.which == 13) { // enter
+        coordinator.do_download();
+        ev.preventDefault();
+    }
+});
+
+$("#save").on('click', (ev) => {
+    coordinator.do_download();
+});
+
+$("#save_as_box").on('popbox_closing', (ev) => {
+    $("#save_as_filename").blur(); // unfocus, so shortcut keys will start working again
 });

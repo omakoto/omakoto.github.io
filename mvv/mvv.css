@@ -77,6 +77,14 @@ canvas#roll2 {
     font-weight: bold;
 }
 
+.popbox_container {
+    color: #202020;
+}
+
+#save_as_filename {
+    width: 20em;
+}
+
 /* unvisited link */
 a:link {
     color: var(--main-text-color);
