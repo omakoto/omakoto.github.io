@@ -786,6 +786,9 @@ function onMIDIFailure() {
 coordinator.startPlaybackTimer();
 coordinator.startDrawTimer();
 coordinator.scheduleFlip();
+
+const worker = new Worker("timer-worker.js");
+
 navigator.requestMIDIAccess()
     .then(onMIDISuccess, onMIDIFailure);
 $(window).keydown((ev) => coordinator.onKeyDown(ev));
