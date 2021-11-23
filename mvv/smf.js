@@ -301,6 +301,10 @@ class SmfReader {
         } else {
             this.#loadOld();
         }
+
+        this.#events.sort((a, b) => {
+            return a.timeStamp - b.timeStamp;
+        });
     }
 
     #loadOld() {
@@ -363,7 +367,6 @@ class SmfReader {
                     }
                 }
             } else {
-                // TODO Running status
                 const d1 = this.#reader.readU8();
                 const d2 = this.#reader.readU8();
 
@@ -414,7 +417,7 @@ class SmfReader {
                 let tick = 0;
                 for (;;) {
                     const delta = rd.readVar();
-                    const status = rd.readU8();
+                    let status = rd.readU8();
 
                     tick += delta;
 
@@ -457,6 +460,8 @@ class SmfReader {
 
                     const statusType = status & 0xf0;
                     const channel = status & 0x0f;
+
+                    // TODO: Ignore non-channel-0 data??
 
                     let data2 = 0;
                     switch (statusType) {

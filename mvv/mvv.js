@@ -244,11 +244,11 @@ class MidiRenderingStatus {
     onMidiMessage(ev) {
         let d = ev.data;
 
-        if (d[0] == 144) { // Note on
+        if (d[0] == 144 && d[2] > 0) { // Note on
             this.#onNoteCount++;
             this.#notes[d[1]][0] = true;
             this.#notes[d[1]][1] = d[2];
-        } else if (d[0] == 128) { // Note off
+        } else if ((d[0] == 128) || (d[0] == 144 && d[2] == 0)) { // Note off
             this.#notes[d[1]][0] = false;
         } else if (d[0] == 176 && d[1] == 64) { // Pedal
             this.#pedal = d[2];
