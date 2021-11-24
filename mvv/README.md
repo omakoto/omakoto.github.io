@@ -22,16 +22,16 @@
 ## Bugs/TODOs
 
 - [ ] Add help
-- [X] Keep playing while in the BG too
-- [ ] Don't use `prompt()` (which stops playback)
 - [ ] Support pausing
 - [ ] Support non-zero channels
+- [ ] Better playback
+  - [ ] Fast-forward should send all skipped control changes
+  - [ ] Rewind should replay all control changes
+- [X] Keep playing while in the BG too
+- [X] Don't use `prompt()` (which stops playback)
 - [X] Support loading a *.mid file
   - [X] Support self-created mid files
   - [X] Support other mid files
 - [X] Constant scroll speed regardless of FPS
   - It should be mostly fixed with double-buffering now, as long as updating the hidden buffer finishes within 16 ms.
 - [X] Show playback timestamp
-- Better playback
-  - [ ] Fast-forward should send all skipped control changes
-  - [ ] Rewind should replay all control changes
