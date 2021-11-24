@@ -505,8 +505,7 @@ class Recorder {
 
     download(filename) {
         if (this.#events.length == 0) {
-            alert("Nothing recorded yet");
-            console.log("Nothing recorded.");
+            info("Nothing recorded yet");
             return;
         }
         console.log("Converting to the SMF format...");
@@ -793,7 +792,7 @@ function onMIDISuccess(midiAccess) {
 }
 
 function onMIDIFailure() {
-    alert('Could not access your MIDI devices.');
+    info('Could not access your MIDI devices.');
 }
 
 // coordinator.startPlaybackTimer();
