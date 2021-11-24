@@ -564,9 +564,7 @@ class Coordinator {
             return;
         }
         // Ignore key repeats.
-        if (ev.originalEvent.repeat) {
-            return;
-        }
+        // if (ev.originalEvent.repeat) return;
 
         switch (ev.which) {
             case 112: // F1
