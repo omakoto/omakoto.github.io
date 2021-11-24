@@ -727,7 +727,6 @@ class Coordinator {
     #scheduleDraw() {
         this.#nextDrawTime += (1000.0 / FPS);
         const delay = (this.#nextDrawTime - window.performance.now());
-        // console.log(delay);
         setTimeout(() => {
             this.onDraw(); // TODO Handle frame drop properly
             this.#scheduleDraw();
@@ -830,7 +829,6 @@ $(window).on('unload', () => {
 
 $("body").on("dragover", function(ev) {
     ev.preventDefault();
-    // ev.originalEvent.dataTransfer.dropEffect = 'copy';
 });
 
 function loadMidiFile(file) {
