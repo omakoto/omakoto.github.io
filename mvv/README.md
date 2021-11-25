@@ -28,6 +28,7 @@
 - [ ] Better playback
   - [ ] Fast-forward should send all skipped control changes
   - [ ] Rewind should replay all control changes
+- [ ] Support SMPTE time format in *.mid files
 - [X] Keep playing while in the BG too
 - [X] Don't use `prompt()` (which stops playback)
 - [X] Support loading a *.mid file
