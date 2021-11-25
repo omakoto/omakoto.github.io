@@ -1,3 +1,5 @@
+'use strict';
+
 // 2D game with canvas example: https://github.com/end3r/Gamedev-Canvas-workshop/blob/gh-pages/lesson10.html
 // Get screen size: https://developer.mozilla.org/en-US/docs/Web/API/Window/devicePixelRatio
 // and window.screen.{width,height{
@@ -370,20 +372,38 @@ class Recorder {
         return true;
     }
 
-    get idIdle() {
-        return this.#state === RecorderState.Idle;;
+    pause() {
+        if (!this.isPlaying) {
+            return false;
+        }
+        this.#state = RecorderState.Pausing;
+        coordinator.onRecorderStatusChanged();
+        return true;
+    }
+
+    unpause() {
+        if (!this.isPausing) {
+            return false;
+        }
+        this.#state = RecorderState.Playing;
+        coordinator.onRecorderStatusChanged();
+        return true;
+    }
+
+    get isIdle() {
+        return this.#state === RecorderState.Idle;
     }
 
     get isRecording() {
-        return this.#state === RecorderState.Recording;;
+        return this.#state === RecorderState.Recording;
     }
 
     get isPlaying() {
-        return this.#state === RecorderState.Playing;;
+        return this.#state === RecorderState.Playing;
     }
 
     get isPausing() {
-        return this.#state === RecorderState.Pausing;;
+        return this.#state === RecorderState.Pausing;
     }
 
     #startRecording() {
@@ -646,10 +666,11 @@ class Coordinator {
     }
 
     togglePlayback() {
-        if (recorder.isPlaying) {
-            recorder.stopPlaying();
-            this.resetMidi();
-        } else {
+        if (recorder.isPausing) {
+            recorder.unpause();
+        } else if (recorder.isPlaying) {
+            recorder.pause();
+        } else if (recorder.isIdle) {
             renderer.show();
             recorder.startPlaying();
         }
@@ -670,6 +691,11 @@ class Coordinator {
             $('#recording').show();
         } else {
             $('#recording').hide();
+        }
+        if (recorder.isPausing) {
+            $('#pausing').show();
+        } else {
+            $('#pausing').hide();
         }
     }
 

@@ -37,16 +37,7 @@ canvas#roll2 {
     display: block;
 }
 
-#recording {
-    position: fixed;
-    left: 8px;
-    top: 8px;
-    width: 32px;
-    height: 32px;
-    display: none;
-}
-
-#playing {
+.recorderStatusIndicator {
     position: fixed;
     left: 8px;
     top: 8px;

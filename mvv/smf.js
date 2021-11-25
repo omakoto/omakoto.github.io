@@ -1,3 +1,5 @@
+'use strict';
+
 // SMF Format: https://ccrma.stanford.edu/~craig/14q/midifile/MidiFileFormat.html
 // https://www.music.mcgill.ca/~gary/306/week9/smf.html
 // https://midimusic.github.io/tech/midispec.html

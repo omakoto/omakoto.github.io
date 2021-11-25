@@ -1,3 +1,5 @@
+'use strict';
+
 const DEBUG = parseInt((new URLSearchParams(window.location.search)).get("debug")) ? true : false;
 
 if (!DEBUG) {
