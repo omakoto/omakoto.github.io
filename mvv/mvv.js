@@ -317,10 +317,16 @@ class MidiOutputManager {
 
 const midiOutputManager = new MidiOutputManager();
 
+const RecorderState = {
+    Idle: 'Idle',
+    Playing: 'Playing',
+    Pausing: 'Pausing',
+    Recording: 'Recording',
+}
+
 class Recorder {
     #events = [];
-    #isPlaying = false;
-    #isRecording = false;
+    #state = RecorderState.Idle;
 
     #recordingStartTimestamp = 0;
     #playbackStartTimestamp = 0;
@@ -331,7 +337,7 @@ class Recorder {
     }
 
     startRecording() {
-        if (this.#isRecording) {
+        if (this.isRecording) {
             return false;
         }
         this.stopPlaying();
@@ -339,7 +345,7 @@ class Recorder {
     }
 
     stopRecording() {
-        if (!this.#isRecording) {
+        if (!this.isRecording) {
             return false;
         }
         this.#stopRecording();
@@ -347,34 +353,42 @@ class Recorder {
     }
 
     startPlaying() {
-        if (this.#isRecording) {
+        if (this.isRecording) {
             return false;
         }
-        if (this.#isPlaying) {
+        if (this.isPlaying) {
             return false;
         }
         this.#startPlaying();
     }
 
     stopPlaying() {
-        if (!this.#isPlaying) {
+        if (!this.isPlaying) {
             return false;
         }
         this.#stopPlaying();
         return true;
     }
 
+    get idIdle() {
+        return this.#state === RecorderState.Idle;;
+    }
+
     get isRecording() {
-        return this.#isRecording;
+        return this.#state === RecorderState.Recording;;
     }
 
     get isPlaying() {
-        return this.#isPlaying;
+        return this.#state === RecorderState.Playing;;
+    }
+
+    get isPausing() {
+        return this.#state === RecorderState.Pausing;;
     }
 
     #startRecording() {
         info("Recording started");
-        this.#isRecording = true;
+        this.#state = RecorderState.Recording;
         this.#events = [];
 
         coordinator.onRecorderStatusChanged();
@@ -382,14 +396,14 @@ class Recorder {
 
     #stopRecording() {
         info("Recording stopped");
-        this.#isRecording = false;
+        this.#state = RecorderState.Idle;
 
         coordinator.onRecorderStatusChanged();
     }
 
     #startPlaying() {
         info("Playback started");
-        this.#isPlaying = true;
+        this.#state = RecorderState.Playing;
         this.#playbackStartTimestamp = window.performance.now();
         this.#playbackTimeAdjustment = 0;
         this.#nextPlaybackIndex = 0;
@@ -399,14 +413,14 @@ class Recorder {
 
     #stopPlaying() {
         info("Playback stopped");
-        this.#isPlaying = false;
+        this.#state = RecorderState.Idle;
 
         coordinator.onRecorderStatusChanged();
         coordinator.resetMidi();
     }
 
     recordEvent(ev) {
-        if (!this.#isRecording) {
+        if (!this.isRecording) {
             return false;
         }
 
@@ -474,8 +488,8 @@ class Recorder {
         return this.#getHumanReadableCurrentPlaybackTimestamp_lastResult;
     }
 
-    playback() {
-        if (!this.#isPlaying) {
+    playbackUpToNow() {
+        if (!this.isPlaying) {
             return false;
         }
 
@@ -494,7 +508,7 @@ class Recorder {
                 // No more events.
 
                 // But do not auto-stop; otherwise it'd be hard to listen to the last part.
-                // this.#isPlaying = false;
+                // this.isPlaying = false;
                 // coordinator.onRecorderStatusChanged();
                 // return false;
                 return true;
@@ -750,7 +764,7 @@ class Coordinator {
     onPlaybackTimer() {
         this.#playbackTicks++;
         if (recorder.isPlaying) {
-            recorder.playback();
+            recorder.playbackUpToNow();
             const timestamp = recorder.getHumanReadableCurrentPlaybackTimestamp();
             if (timestamp != this.#onPlaybackTimer_lastShownPlaybackTimestamp) {
                 infoRaw(timestamp);
