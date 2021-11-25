@@ -71,6 +71,14 @@ function getCurrentTime() {
     return ret.replace("Z", "").replaceAll(/[:T]/g, "-").replace(/\..*$/, "");
 }
 
+function show(selector, show) {
+    if (show) {
+        $(selector).show();
+    } else {
+        $(selector).hide();
+    }
+}
+
 // Logic
 
 class Renderer {
@@ -408,6 +416,18 @@ class Recorder {
         return this.#state === RecorderState.Pausing;
     }
 
+    get isAnythingRecorded() {
+        return this.#events.length > 0;
+    }
+
+    get isAfterLast() {
+        return this.#events.length <= this.#nextPlaybackIndex;
+    }
+
+    get currentPlaybackTimestamp() {
+        return this.#getCurrentPlaybackTimestamp();
+    }
+
     #startRecording() {
         info("Recording started");
         this.#state = RecorderState.Recording;
@@ -496,25 +516,6 @@ class Recorder {
                 this.#playbackTimeAdjustment - this.#getPausingDuration();
     }
 
-    #getHumanReadableCurrentPlaybackTimestamp_lastTotalSeconds = -1;
-    #getHumanReadableCurrentPlaybackTimestamp_lastResult;
-
-    getHumanReadableCurrentPlaybackTimestamp() {
-        const totalSeconds = int(this.#getCurrentPlaybackTimestamp() / 1000);
-        if (totalSeconds <= 0) {
-            return "0:00";
-        }
-        if (totalSeconds == this.#getHumanReadableCurrentPlaybackTimestamp_lastTotalSeconds) {
-            return this.#getHumanReadableCurrentPlaybackTimestamp_lastResult;
-        }
-        const minutes = int(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        this.#getHumanReadableCurrentPlaybackTimestamp_lastTotalSeconds = totalSeconds;
-        this.#getHumanReadableCurrentPlaybackTimestamp_lastResult =
-            minutes + ":" + (seconds < 10 ? "0" + seconds : seconds);
-        return this.#getHumanReadableCurrentPlaybackTimestamp_lastResult;
-    }
-
     playbackUpToNow() {
         if (!this.isPlaying) {
             return false;
@@ -531,7 +532,7 @@ class Recorder {
 
     #moveUpToTimestamp(timestamp, callback) {
         for (;;) {
-            if (this.#events.length <= this.#nextPlaybackIndex) {
+            if (this.isAfterLast) {
                 // No more events.
 
                 // But do not auto-stop; otherwise it'd be hard to listen to the last part.
@@ -550,10 +551,6 @@ class Recorder {
                 callback(ev);
             }
         }
-    }
-
-    isAnythingRecorded() {
-        return this.#events.length > 0;
     }
 
     download(filename) {
@@ -695,21 +692,9 @@ class Coordinator {
     }
 
     #updateRecorderStatus() {
-        if (recorder.isPlaying) {
-            $('#playing').show();
-        } else {
-            $('#playing').hide();
-        }
-        if (recorder.isRecording) {
-            $('#recording').show();
-        } else {
-            $('#recording').hide();
-        }
-        if (recorder.isPausing) {
-            $('#pausing').show();
-        } else {
-            $('#pausing').hide();
-        }
+        show('#playing', recorder.isPlaying);
+        show('#recording', recorder.isRecording);
+        show('#pausing', recorder.isPausing);
     }
 
     #ignoreRepeatedRewindKey = false;
@@ -773,6 +758,29 @@ class Coordinator {
         midiOutputManager.reset();
     }
 
+    #getHumanReadableCurrentPlaybackTimestamp_lastTotalSeconds = -1;
+    #getHumanReadableCurrentPlaybackTimestamp_lastResult;
+
+    getHumanReadableCurrentPlaybackTimestamp() {
+        const totalSeconds = int(recorder.currentPlaybackTimestamp / 1000);
+        if (totalSeconds == this.#getHumanReadableCurrentPlaybackTimestamp_lastTotalSeconds) {
+            return this.#getHumanReadableCurrentPlaybackTimestamp_lastResult;
+        }
+
+        if (totalSeconds <= 0) {
+            this.#getHumanReadableCurrentPlaybackTimestamp_lastResult = "0:00";
+        } else {
+            const minutes = int(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            this.#getHumanReadableCurrentPlaybackTimestamp_lastTotalSeconds = totalSeconds;
+            this.#getHumanReadableCurrentPlaybackTimestamp_lastResult =
+                minutes + ":" + (seconds < 10 ? "0" + seconds : seconds);
+        }
+        const isFinished = recorder.isAfterLast ? " (finished)" : "";
+        this.#getHumanReadableCurrentPlaybackTimestamp_lastResult += isFinished;
+        return this.#getHumanReadableCurrentPlaybackTimestamp_lastResult;
+    }
+
     onDraw() {
         // Update FPS
         this.#frames++;
@@ -808,7 +816,7 @@ class Coordinator {
         }
         if (recorder.isPlaying || recorder.isPausing) {
             // Update the time indicator
-            const timestamp = recorder.getHumanReadableCurrentPlaybackTimestamp();
+            const timestamp = this.getHumanReadableCurrentPlaybackTimestamp();
             if (timestamp != this.#onPlaybackTimer_lastShownPlaybackTimestamp) {
                 infoRaw(timestamp);
                 this.#onPlaybackTimer_lastShownPlaybackTimestamp = timestamp;
@@ -837,7 +845,7 @@ class Coordinator {
     #save_as_box;
 
     #open_download_box() {
-        if (!recorder.isAnythingRecorded()) {
+        if (!recorder.isAnythingRecorded) {
             info("Nothing is recorded");
             return;
         }
