@@ -429,6 +429,10 @@ class Recorder {
         return true;
     }
 
+    moveToStart() {
+        this.adjustPlaybackPosition(-9999999999);
+    }
+
     // Fast-forward or rewind.
     adjustPlaybackPosition(milliseconds) {
         this.#playbackTimeAdjustment += milliseconds;
@@ -563,8 +567,6 @@ class Coordinator {
         this.#efps = $("#fps");
     }
 
-    #ignoreRepeatedRewindKey = false;
-
     onKeyDown(ev) {
         debug("onKeyDown", ev.timeStamp, ev.which, ev);
 
@@ -601,18 +603,7 @@ class Coordinator {
                 this.togglePlayback();
                 break;
             case 37: // Left
-                if (isRepeat && this.#ignoreRepeatedRewindKey) {
-                    break;
-                }
-                if (!isRepeat) {
-                    this.#ignoreRepeatedRewindKey = false;
-                }
-                if (recorder.isPlaying) {
-                    this.resetMidi();
-                    if (!recorder.adjustPlaybackPosition(-1000)) {
-                        this.#ignoreRepeatedRewindKey = true;
-                    }
-                }
+                this.#onRewindPressed(isRepeat);
                 break;
             case 39: // Right
                 if (recorder.isPlaying) {
@@ -666,6 +657,34 @@ class Coordinator {
         } else {
             $('#recording').hide();
         }
+    }
+
+    #ignoreRepeatedRewindKey = false;
+    #lastRewindPressTime;
+
+    #onRewindPressed(isRepeat) {
+        // If non-repeat left is pressed twice within a timeout, move to start.
+        if (!isRepeat) {
+            const now = window.performance.now();
+            if ((now - this.#lastRewindPressTime) <= 200) {
+                recorder.moveToStart();
+                return;
+            }
+            this.#lastRewindPressTime = now;
+        }
+        if (isRepeat && this.#ignoreRepeatedRewindKey) {
+            return;
+        }
+        if (!isRepeat) {
+            this.#ignoreRepeatedRewindKey = false;
+        }
+        if (recorder.isPlaying) {
+            this.resetMidi();
+            if (!recorder.adjustPlaybackPosition(-1000)) {
+                this.#ignoreRepeatedRewindKey = true;
+            }
+        }
+        return;
     }
 
     #normalizeMidiEvent(ev) {
