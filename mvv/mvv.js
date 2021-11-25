@@ -355,17 +355,14 @@ class Recorder {
     }
 
     startPlaying() {
-        if (this.isRecording) {
-            return false;
-        }
-        if (this.isPlaying) {
+        if (!this.isIdle) {
             return false;
         }
         this.#startPlaying();
     }
 
     stopPlaying() {
-        if (!this.isPlaying) {
+        if (!(this.isPlaying || this.isPausing)) {
             return false;
         }
         this.#stopPlaying();
@@ -632,6 +629,12 @@ class Coordinator {
                 if (isRepeat) break;
                 $('#open_file').trigger('click');
                 break;
+            case 90: // Z
+                if (isRepeat) break;
+                if (recorder.isPlaying || recorder.isPausing) {
+                    recorder.stopPlaying();
+                }
+                break;
             case 32: // Space
                 if (isRepeat) break;
                 this.togglePlayback();
@@ -791,6 +794,9 @@ class Coordinator {
         this.#playbackTicks++;
         if (recorder.isPlaying) {
             recorder.playbackUpToNow();
+        }
+        if (recorder.isPausing || recorder.isPausing) {
+            // Update the time indicator
             const timestamp = recorder.getHumanReadableCurrentPlaybackTimestamp();
             if (timestamp != this.#onPlaybackTimer_lastShownPlaybackTimestamp) {
                 infoRaw(timestamp);
