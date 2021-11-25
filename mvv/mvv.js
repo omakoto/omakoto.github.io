@@ -376,11 +376,15 @@ class Recorder {
         info("Recording started");
         this.#isRecording = true;
         this.#events = [];
+
+        coordinator.onRecorderStatusChanged();
     }
 
     #stopRecording() {
         info("Recording stopped");
         this.#isRecording = false;
+
+        coordinator.onRecorderStatusChanged();
     }
 
     #startPlaying() {
@@ -389,11 +393,16 @@ class Recorder {
         this.#playbackStartTimestamp = window.performance.now();
         this.#playbackTimeAdjustment = 0;
         this.#nextPlaybackIndex = 0;
+
+        coordinator.onRecorderStatusChanged();
     }
 
     #stopPlaying() {
         info("Playback stopped");
         this.#isPlaying = false;
+
+        coordinator.onRecorderStatusChanged();
+        coordinator.resetMidi();
     }
 
     recordEvent(ev) {
@@ -482,7 +491,7 @@ class Recorder {
 
                 // But do not auto-stop; otherwise it'd be hard to listen to the last part.
                 // this.#isPlaying = false;
-                // coordinator.onPlaybackFinished();
+                // coordinator.onRecorderStatusChanged();
                 // return false;
                 return true;
             }
@@ -642,10 +651,8 @@ class Coordinator {
         this.#updateRecorderStatus();
     }
 
-    onPlaybackFinished() {
-        info("Playback finished");
+    onRecorderStatusChanged() {
         this.#updateRecorderStatus();
-        this.resetMidi();
     }
 
     #updateRecorderStatus() {

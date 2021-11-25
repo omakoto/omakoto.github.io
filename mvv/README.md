@@ -23,6 +23,7 @@
 
 - [ ] Add help
 - [ ] Support pausing
+- [ ] Show confirmation dialog before over-recording
 - [ ] Support non-zero channels
 - [ ] Better playback
   - [ ] Fast-forward should send all skipped control changes
