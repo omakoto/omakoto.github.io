@@ -306,7 +306,7 @@ class MidiOutputManager {
         this.#device.send([176, 123, 0], 0); // All notes off
         this.#device.send([176, 121, 0], 0); // Reset all controllers
         this.#device.send([255], 0); // All reset
-        console.log("MIDI reset");
+        // console.log("MIDI reset");
     }
 
     sendEvent(data, timestamp) {
