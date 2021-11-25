@@ -17,7 +17,7 @@
 ## Supported midi events
 
 - Only note ons/offs and the pedal depth will be visualized.
-- Other MIDI events are not visualized, but MVV will still record / play them, probably...
+- Other MIDI events are not visualized, but MVV will/should still record / play them; not tested though.
 
 ## Bugs/TODOs
 
