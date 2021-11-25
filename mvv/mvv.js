@@ -334,9 +334,7 @@ class Recorder {
         if (this.#isRecording) {
             return false;
         }
-        if (this.#isPlaying) {
-            return false;
-        }
+        this.stopPlaying();
         this.#startRecording();
     }
 
@@ -430,13 +428,14 @@ class Recorder {
         if (ts <= 0) {
             this.#playbackStartTimestamp = window.performance.now();
             this.#playbackTimeAdjustment = 0;
-              ts = -1; // Special case: Move before the first note.
+            ts = -1; // Special case: Move before the first note.
         }
         // info("New playback timestamp: " + (ts < 0 ? 0 : int(ts / 1000)));
 
         // Find the next play event index.
         this.#nextPlaybackIndex = 0;
         this.#moveUpToTimestamp(ts, null);
+        return ts >= 0;
     }
 
     #getCurrentPlaybackTimestamp() {
@@ -555,6 +554,8 @@ class Coordinator {
         this.#efps = $("#fps");
     }
 
+    #ignoreRepeatedRewindKey = false;
+
     onKeyDown(ev) {
         debug("onKeyDown", ev.timeStamp, ev.which, ev);
 
@@ -563,31 +564,45 @@ class Coordinator {
             return;
         }
         // Ignore key repeats.
-        // if (ev.originalEvent.repeat) return;
+        const isRepeat = ev.originalEvent.repeat;
 
         switch (ev.which) {
             case 112: // F1
+                if (isRepeat) break;
                 this.toggleVideoMute();
                 break;
             case 70: // F
+                if (isRepeat) break;
                 this.#efps.toggle();
                 break;
             case 82: // R
+                if (isRepeat) break;
                 this.toggleRecording();
                 break;
             case 83: // S
+                if (isRepeat) break;
                 this.#open_download_box();
                 break;
             case 76: // L
+                if (isRepeat) break;
                 $('#open_file').trigger('click');
                 break;
             case 32: // Space
+                if (isRepeat) break;
                 this.togglePlayback();
                 break;
             case 37: // Left
+                if (isRepeat && this.#ignoreRepeatedRewindKey) {
+                    break;
+                }
+                if (!isRepeat) {
+                    this.#ignoreRepeatedRewindKey = false;
+                }
                 if (recorder.isPlaying) {
                     this.resetMidi();
-                    recorder.adjustPlaybackPosition(-1000);
+                    if (!recorder.adjustPlaybackPosition(-1000)) {
+                        this.#ignoreRepeatedRewindKey = true;
+                    }
                 }
                 break;
             case 39: // Right
@@ -597,7 +612,7 @@ class Coordinator {
                 }
                 break;
             default:
-                return;
+                return; // Don't prevent the default behavior.
         }
         ev.preventDefault();
     }
