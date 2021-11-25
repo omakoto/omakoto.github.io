@@ -22,10 +22,10 @@
 ## Bugs/TODOs
 
 - [ ] Add help
-- [ ] Support pausing
+- [X] Support pausing
 - [ ] Show confirmation dialog before over-recording
 - [ ] Support non-zero channels
-- [ ] Better playback
+- [ ] Better playback (as a geneal MIDI player)
   - [ ] Fast-forward should send all skipped control changes
   - [ ] Rewind should replay all control changes
 - [ ] Support SMPTE time format in *.mid files

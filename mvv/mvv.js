@@ -333,6 +333,7 @@ class Recorder {
     #recordingStartTimestamp = 0;
     #playbackStartTimestamp = 0;
     #playbackTimeAdjustment = 0;
+    #pauseStartTimestamp = 0;
     #nextPlaybackIndex = 0;
 
     constructor() {
@@ -373,6 +374,7 @@ class Recorder {
         if (!this.isPlaying) {
             return false;
         }
+        this.#pauseStartTimestamp = performance.now();
         this.#state = RecorderState.Pausing;
         coordinator.onRecorderStatusChanged();
         return true;
@@ -382,6 +384,9 @@ class Recorder {
         if (!this.isPausing) {
             return false;
         }
+        // Shift the start timestamp by paused duration.
+        const pausedDuration = this.#getPausingDuration();
+        this.#playbackStartTimestamp += pausedDuration;
         this.#state = RecorderState.Playing;
         coordinator.onRecorderStatusChanged();
         return true;
@@ -482,8 +487,13 @@ class Recorder {
         return ts >= 0;
     }
 
+    #getPausingDuration() {
+        return this.isPausing ? (performance.now() - this.#pauseStartTimestamp) : 0;
+    }
+
     #getCurrentPlaybackTimestamp() {
-        return (window.performance.now() - this.#playbackStartTimestamp) + this.#playbackTimeAdjustment;
+        return (window.performance.now() - this.#playbackStartTimestamp) +
+                this.#playbackTimeAdjustment - this.#getPausingDuration();
     }
 
     #getHumanReadableCurrentPlaybackTimestamp_lastTotalSeconds = -1;
@@ -643,7 +653,7 @@ class Coordinator {
                 this.#onRewindPressed(isRepeat);
                 break;
             case 39: // Right
-                if (recorder.isPlaying) {
+                if (recorder.isPlaying || recorder.isPausing) {
                     this.resetMidi();
                     recorder.adjustPlaybackPosition(1000);
                 }
@@ -706,10 +716,13 @@ class Coordinator {
     #lastRewindPressTime;
 
     #onRewindPressed(isRepeat) {
+        if (!(recorder.isPlaying || recorder.isPausing)) {
+            return;
+        }
         // If non-repeat left is pressed twice within a timeout, move to start.
         if (!isRepeat) {
             const now = window.performance.now();
-            if ((now - this.#lastRewindPressTime) <= 200) {
+            if ((now - this.#lastRewindPressTime) <= 120) {
                 recorder.moveToStart();
                 return;
             }
@@ -721,11 +734,9 @@ class Coordinator {
         if (!isRepeat) {
             this.#ignoreRepeatedRewindKey = false;
         }
-        if (recorder.isPlaying) {
-            this.resetMidi();
-            if (!recorder.adjustPlaybackPosition(-1000)) {
-                this.#ignoreRepeatedRewindKey = true;
-            }
+        this.resetMidi();
+        if (!recorder.adjustPlaybackPosition(-1000)) {
+            this.#ignoreRepeatedRewindKey = true;
         }
         return;
     }
@@ -795,7 +806,7 @@ class Coordinator {
         if (recorder.isPlaying) {
             recorder.playbackUpToNow();
         }
-        if (recorder.isPausing || recorder.isPausing) {
+        if (recorder.isPlaying || recorder.isPausing) {
             // Update the time indicator
             const timestamp = recorder.getHumanReadableCurrentPlaybackTimestamp();
             if (timestamp != this.#onPlaybackTimer_lastShownPlaybackTimestamp) {
