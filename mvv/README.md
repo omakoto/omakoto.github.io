@@ -4,12 +4,15 @@
 
 [MVV](https://omakoto.github.io/mvv/) is an online MIDI input visualizer, created for piano learners.
 
+Source file is available [here](https://github.com/omakoto/mvv).
+
 ## Keys
 
 - `F1` hide screen
 - `R` Record start/stop
-- `SPACE` Playback start/stop
+- `SPACE` Playback start / pause
   - `Left`/`Right` during playback -- Rewind/Fast-forward
+- `Z` Stop playback
 - `S` Save the last recording as a midi file
 - `L` Load a `*.mid` file
 - `F` Show FPS and playback timer resolution.
@@ -28,6 +31,7 @@
 - [ ] Better playback (as a geneal MIDI player)
   - [ ] Fast-forward should send all skipped control changes
   - [ ] Rewind should replay all control changes
+- [ ] Sync the renderer to vsync (?)
 - [ ] Support SMPTE time format in *.mid files
 - [X] Keep playing while in the BG too
 - [X] Don't use `prompt()` (which stops playback)
