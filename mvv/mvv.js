@@ -214,25 +214,27 @@ _Renderer_BAR_SUB_LINE_WIDTH = new WeakMap(), _Renderer_BAR_BASE_LINE_COLOR = ne
 const renderer = new Renderer();
 class MidiRenderingStatus {
     constructor() {
-        _MidiRenderingStatus_notes.set(this, void 0); // note on/off, velocity
+        _MidiRenderingStatus_notes.set(this, []); // note on/off, velocity
         _MidiRenderingStatus_pedal.set(this, 0);
         _MidiRenderingStatus_onNoteCount.set(this, 0);
         this.reset();
     }
     onMidiMessage(ev) {
         var _a;
-        let d = ev.data;
-        if (d[0] == 144 && d[2] > 0) { // Note on
+        let data0 = ev.data0;
+        let data1 = ev.data1;
+        let data2 = ev.data2;
+        if (data0 == 144 && data2 > 0) { // Note on
             __classPrivateFieldSet(this, _MidiRenderingStatus_onNoteCount, // Note on
             (_a = __classPrivateFieldGet(this, _MidiRenderingStatus_onNoteCount, "f"), _a++, _a), "f");
-            __classPrivateFieldGet(this, _MidiRenderingStatus_notes, "f")[d[1]][0] = true;
-            __classPrivateFieldGet(this, _MidiRenderingStatus_notes, "f")[d[1]][1] = d[2];
+            __classPrivateFieldGet(this, _MidiRenderingStatus_notes, "f")[data1][0] = true;
+            __classPrivateFieldGet(this, _MidiRenderingStatus_notes, "f")[data1][1] = data2;
         }
-        else if ((d[0] == 128) || (d[0] == 144 && d[2] == 0)) { // Note off
-            __classPrivateFieldGet(this, _MidiRenderingStatus_notes, "f")[d[1]][0] = false;
+        else if ((data0 == 128) || (data0 == 144 && data2 == 0)) { // Note off
+            __classPrivateFieldGet(this, _MidiRenderingStatus_notes, "f")[data1][0] = false;
         }
-        else if (d[0] == 176 && d[1] == 64) { // Pedal
-            __classPrivateFieldSet(this, _MidiRenderingStatus_pedal, d[2], "f");
+        else if (data0 == 176 && data1 == 64) { // Pedal
+            __classPrivateFieldSet(this, _MidiRenderingStatus_pedal, data2, "f");
         }
     }
     reset() {
@@ -243,7 +245,7 @@ class MidiRenderingStatus {
         __classPrivateFieldSet(this, _MidiRenderingStatus_pedal, 0, "f");
         __classPrivateFieldSet(this, _MidiRenderingStatus_onNoteCount, 0, "f");
     }
-    afterDraw(now) {
+    afterDraw(_now) {
         __classPrivateFieldSet(this, _MidiRenderingStatus_onNoteCount, 0, "f");
     }
     get onNoteCount() {
@@ -260,7 +262,7 @@ _MidiRenderingStatus_notes = new WeakMap(), _MidiRenderingStatus_pedal = new Wea
 const midiRenderingStatus = new MidiRenderingStatus();
 class MidiOutputManager {
     constructor() {
-        _MidiOutputManager_device.set(this, void 0);
+        _MidiOutputManager_device.set(this, null);
     }
     setMidiOut(device) {
         console.log("MIDI output dev: WebMidi.MIDIOutput set:", device);
@@ -288,12 +290,13 @@ class MidiOutputManager {
 }
 _MidiOutputManager_device = new WeakMap();
 const midiOutputManager = new MidiOutputManager();
-const RecorderState = {
-    Idle: 'Idle',
-    Playing: 'Playing',
-    Pausing: 'Pausing',
-    Recording: 'Recording',
-};
+var RecorderState;
+(function (RecorderState) {
+    RecorderState[RecorderState["Idle"] = 0] = "Idle";
+    RecorderState[RecorderState["Playing"] = 1] = "Playing";
+    RecorderState[RecorderState["Pausing"] = 2] = "Pausing";
+    RecorderState[RecorderState["Recording"] = 3] = "Recording";
+})(RecorderState || (RecorderState = {}));
 class Recorder {
     constructor() {
         _Recorder_instances.add(this);
@@ -380,7 +383,7 @@ class Recorder {
             return false;
         }
         // Only record certain events.
-        switch (ev.data[0]) {
+        switch (ev.data0) {
             case 144: // Note on
             case 128: // Note off
             case 176: // Control
@@ -429,7 +432,7 @@ class Recorder {
                     " index=" + (__classPrivateFieldGet(this, _Recorder_nextPlaybackIndex, "f") - 1), ev);
             }
             midiRenderingStatus.onMidiMessage(ev);
-            midiOutputManager.sendEvent(ev.data, 0);
+            midiOutputManager.sendEvent(ev.getDataAsArray(), 0);
         });
     }
     download(filename) {
@@ -441,9 +444,9 @@ class Recorder {
         let wr = new SmfWriter();
         let lastTimestamp = __classPrivateFieldGet(this, _Recorder_events, "f")[0].timeStamp;
         __classPrivateFieldGet(this, _Recorder_events, "f").forEach((ev) => {
-            debug(ev.timeStamp, ev.data);
+            debug(ev.timeStamp, ev.getDataAsArray());
             let delta = ev.timeStamp - lastTimestamp;
-            wr.writeMessage(delta, ev.data);
+            wr.writeMessage(delta, ev.getDataAsArray());
             lastTimestamp = ev.timeStamp;
         });
         wr.download(filename);
@@ -524,7 +527,7 @@ class Coordinator {
         _Coordinator_getHumanReadableCurrentPlaybackTimestamp_lastTotalSeconds.set(this, -1);
         _Coordinator_getHumanReadableCurrentPlaybackTimestamp_lastResult.set(this, "");
         _Coordinator_onPlaybackTimer_lastShownPlaybackTimestamp.set(this, "");
-        _Coordinator_save_as_box.set(this, void 0);
+        _Coordinator_save_as_box.set(this, null);
         __classPrivateFieldSet(this, _Coordinator_nextSecond, window.performance.now() + 1000, "f");
         __classPrivateFieldSet(this, _Coordinator_efps, $("#fps"), "f");
     }
@@ -618,7 +621,7 @@ class Coordinator {
         __classPrivateFieldGet(this, _Coordinator_instances, "m", _Coordinator_updateRecorderStatus).call(this);
     }
     onMidiMessage(ev) {
-        debug("onMidiMessage", ev.timeStamp, ev.data[0], ev.data[1], ev.data[2], ev);
+        debug("onMidiMessage", ev.timeStamp, ev.data0, ev.data1, ev.data2, ev);
         __classPrivateFieldGet(this, _Coordinator_instances, "m", _Coordinator_normalizeMidiEvent).call(this, ev);
         midiRenderingStatus.onMidiMessage(ev);
         if (recorder.isRecording) {
@@ -729,7 +732,7 @@ _Coordinator_now = new WeakMap(), _Coordinator_nextSecond = new WeakMap(), _Coor
     // If non-repeat left is pressed twice within a timeout, move to start.
     if (!isRepeat) {
         const now = window.performance.now();
-        if ((now - __classPrivateFieldGet(this, _Coordinator_lastRewindPressTime, "f")) <= 120) {
+        if ((now - __classPrivateFieldGet(this, _Coordinator_lastRewindPressTime, "f")) <= 150) {
             recorder.moveToStart();
             return;
         }
@@ -749,9 +752,8 @@ _Coordinator_now = new WeakMap(), _Coordinator_nextSecond = new WeakMap(), _Coor
 }, _Coordinator_normalizeMidiEvent = function _Coordinator_normalizeMidiEvent(ev) {
     // Allow V25's leftmost knob to be used as the pedal.
     if (ev.device.startsWith("V25")) {
-        let d = ev.data;
-        if (d[0] == 176 && d[1] == 20) {
-            d[1] = 64;
+        if (ev.data0 == 176 && ev.data1 == 20) {
+            ev.replaceData(1, 64);
         }
     }
 }, _Coordinator_scheduleDraw = function _Coordinator_scheduleDraw() {
@@ -854,9 +856,9 @@ $("#save_as_filename").keydown((ev) => {
         ev.preventDefault();
     }
 });
-$("#save").on('click', (ev) => {
+$("#save").on('click', (_ev) => {
     coordinator.do_download();
 });
-$("#save_as_box").on('popbox_closing', (ev) => {
+$("#save_as_box").on('popbox_closing', (_ev) => {
     $("#save_as_filename").trigger('blur'); // unfocus, so shortcut keys will start working again
 });

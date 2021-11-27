@@ -1,3 +1,4 @@
+"use strict";
 console.log("Worker loaded");
 onmessage = (e) => {
     console.log("Worker.onmessage", e);

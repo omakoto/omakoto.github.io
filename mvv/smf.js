@@ -10,14 +10,14 @@ var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (
     if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
     return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
 };
-var _MidiEvent_timeStamp, _MidiEvent_data, _MidiEvent_device, _BytesWriter_instances, _BytesWriter_cap, _BytesWriter_size, _BytesWriter_buf, _BytesWriter_grow, _BytesWriter_ensureCap, _BytesWriter_ensureGrowth, _BytesReader_buffer, _BytesReader_pos, _TickConverter_instances, _TickConverter_ticksPerBeat, _TickConverter_tempos, _TickConverter_lastTempoEvent, _TickConverter_ticksToMilliseconds, _SmfReader_instances, _SmfReader_reader, _SmfReader_events, _SmfReader_onInvalidFormat, _SmfReader_ensureU8, _SmfReader_ensureU16, _SmfReader_ensureU32, _SmfReader_ensureU8Array, _SmfReader_withReader, _SmfReader_load, _SmfReader_loadOld, _SmfReader_loadBetter, _SmfWriter_instances, _SmfWriter_writer, _SmfWriter_trackLengthPos, _SmfWriter_closed, _SmfWriter_withWriter, _SmfWriter_writeResetData;
+var _MidiEvent_timeStamp, _MidiEvent_data, _MidiEvent_device, _BytesWriter_instances, _BytesWriter_cap, _BytesWriter_size, _BytesWriter_buf, _BytesWriter_grow, _BytesWriter_ensureCap, _BytesReader_buffer, _BytesReader_pos, _TickConverter_instances, _TickConverter_ticksPerBeat, _TickConverter_tempos, _TickConverter_lastTempoEvent, _TickConverter_ticksToMilliseconds, _SmfReader_instances, _SmfReader_reader, _SmfReader_loaded, _SmfReader_events, _SmfReader_onInvalidFormat, _SmfReader_ensureU8, _SmfReader_ensureU16, _SmfReader_ensureU32, _SmfReader_ensureU8Array, _SmfReader_withReader, _SmfReader_load, _SmfReader_loadOld, _SmfReader_loadBetter, _SmfWriter_instances, _SmfWriter_writer, _SmfWriter_trackLengthPos, _SmfWriter_closed, _SmfWriter_withWriter, _SmfWriter_writeResetData;
 // SMF Format: https://ccrma.stanford.edu/~craig/14q/midifile/MidiFileFormat.html
 // https://www.music.mcgill.ca/~gary/306/week9/smf.html
 // https://midimusic.github.io/tech/midispec.html
 function logBlob(blob) {
     let fileReader = new FileReader();
     fileReader.readAsArrayBuffer(blob);
-    fileReader.onload = function (event) {
+    fileReader.onload = function (_event) {
         console.log(fileReader.result);
     };
     return blob;
@@ -40,11 +40,38 @@ class MidiEvent {
     get timeStamp() {
         return __classPrivateFieldGet(this, _MidiEvent_timeStamp, "f");
     }
-    get data() {
-        return __classPrivateFieldGet(this, _MidiEvent_data, "f");
-    }
     get device() {
         return __classPrivateFieldGet(this, _MidiEvent_device, "f");
+    }
+    getData(index) {
+        if (index < 0) {
+            throw "Index cannot be negative";
+        }
+        if (index >= __classPrivateFieldGet(this, _MidiEvent_data, "f").length) {
+            return 0;
+        }
+        return __classPrivateFieldGet(this, _MidiEvent_data, "f")[index];
+    }
+    replaceData(index, value) {
+        if (index < 0) {
+            throw "Index cannot be negative";
+        }
+        if (index >= __classPrivateFieldGet(this, _MidiEvent_data, "f").length) {
+            throw "Index out of range";
+        }
+        __classPrivateFieldGet(this, _MidiEvent_data, "f")[index] = value;
+    }
+    get data0() {
+        return this.getData(0);
+    }
+    get data1() {
+        return this.getData(1);
+    }
+    get data2() {
+        return this.getData(2);
+    }
+    getDataAsArray() {
+        return __classPrivateFieldGet(this, _MidiEvent_data, "f");
     }
 }
 _MidiEvent_timeStamp = new WeakMap(), _MidiEvent_data = new WeakMap(), _MidiEvent_device = new WeakMap();
@@ -98,20 +125,20 @@ class BytesWriter {
     }
     setU8(pos, val) {
         __classPrivateFieldGet(this, _BytesWriter_instances, "m", _BytesWriter_ensureCap).call(this, pos + 1);
-        __classPrivateFieldGet(this, _BytesWriter_buf, "f")[pos + 0] = (val >> 0) & 255;
+        __classPrivateFieldGet(this, _BytesWriter_buf, "f")[pos + 0] = val & 255;
         return this;
     }
     setU16(pos, val) {
         __classPrivateFieldGet(this, _BytesWriter_instances, "m", _BytesWriter_ensureCap).call(this, pos + 2);
         __classPrivateFieldGet(this, _BytesWriter_buf, "f")[pos + 0] = (val >> 8) & 255;
-        __classPrivateFieldGet(this, _BytesWriter_buf, "f")[pos + 1] = (val >> 0) & 255;
+        __classPrivateFieldGet(this, _BytesWriter_buf, "f")[pos + 1] = val & 255;
         return this;
     }
     setU24(pos, val) {
         __classPrivateFieldGet(this, _BytesWriter_instances, "m", _BytesWriter_ensureCap).call(this, pos + 3);
         __classPrivateFieldGet(this, _BytesWriter_buf, "f")[pos + 0] = (val >> 16) & 255;
         __classPrivateFieldGet(this, _BytesWriter_buf, "f")[pos + 1] = (val >> 8) & 255;
-        __classPrivateFieldGet(this, _BytesWriter_buf, "f")[pos + 2] = (val >> 0) & 255;
+        __classPrivateFieldGet(this, _BytesWriter_buf, "f")[pos + 2] = val & 255;
         return this;
     }
     setU32(pos, val) {
@@ -119,7 +146,7 @@ class BytesWriter {
         __classPrivateFieldGet(this, _BytesWriter_buf, "f")[pos + 0] = (val >> 24) & 255;
         __classPrivateFieldGet(this, _BytesWriter_buf, "f")[pos + 1] = (val >> 16) & 255;
         __classPrivateFieldGet(this, _BytesWriter_buf, "f")[pos + 2] = (val >> 8) & 255;
-        __classPrivateFieldGet(this, _BytesWriter_buf, "f")[pos + 3] = (val >> 0) & 255;
+        __classPrivateFieldGet(this, _BytesWriter_buf, "f")[pos + 3] = val & 255;
         return this;
     }
     getSize() {
@@ -143,8 +170,6 @@ _BytesWriter_cap = new WeakMap(), _BytesWriter_size = new WeakMap(), _BytesWrite
     }
     __classPrivateFieldGet(this, _BytesWriter_instances, "m", _BytesWriter_grow).call(this);
     return this;
-}, _BytesWriter_ensureGrowth = function _BytesWriter_ensureGrowth(size) {
-    return __classPrivateFieldGet(this, _BytesWriter_instances, "m", _BytesWriter_ensureCap).call(this, __classPrivateFieldGet(this, _BytesWriter_size, "f") + size);
 };
 class BytesReader {
     constructor(ar) {
@@ -154,6 +179,9 @@ class BytesReader {
     }
     readU8() {
         var _a, _b;
+        if (__classPrivateFieldGet(this, _BytesReader_buffer, "f").length <= __classPrivateFieldGet(this, _BytesReader_pos, "f")) {
+            throw "Reading after EOF";
+        }
         return __classPrivateFieldGet(this, _BytesReader_buffer, "f")[__classPrivateFieldSet(this, _BytesReader_pos, (_b = __classPrivateFieldGet(this, _BytesReader_pos, "f"), _a = _b++, _b), "f"), _a];
     }
     readU16() {
@@ -191,6 +219,14 @@ class BytesReader {
 }
 _BytesReader_buffer = new WeakMap(), _BytesReader_pos = new WeakMap();
 class TempoEvent {
+    constructor(ticks, mspb, timeOffset) {
+        this.ticks = 0;
+        this.mspb = 0;
+        this.timeOffset = 0;
+        this.ticks = ticks;
+        this.mspb = mspb;
+        this.timeOffset = timeOffset;
+    }
 }
 // Converts "ticks" (not delta ticks, but absolute ticks) in a midi file to milliseconds.
 class TickConverter {
@@ -201,11 +237,7 @@ class TickConverter {
         _TickConverter_lastTempoEvent.set(this, void 0);
         __classPrivateFieldSet(this, _TickConverter_ticksPerBeat, ticksPerBeat, "f");
         // Arbitrary initial tempo
-        __classPrivateFieldSet(this, _TickConverter_lastTempoEvent, {
-            ticks: 0,
-            mspb: 500000,
-            timeOffset: 0,
-        }, "f");
+        __classPrivateFieldSet(this, _TickConverter_lastTempoEvent, new TempoEvent(0, 500000, 0), "f");
         __classPrivateFieldGet(this, _TickConverter_tempos, "f").push(__classPrivateFieldGet(this, _TickConverter_lastTempoEvent, "f"));
     }
     setTempo(ticks, microsecondsPerBeat) {
@@ -222,8 +254,7 @@ class TickConverter {
             throw "ticks must not be negative";
         }
         let nearestTempo;
-        for (let i = 0; i < __classPrivateFieldGet(this, _TickConverter_tempos, "f").length; i++) {
-            const t = __classPrivateFieldGet(this, _TickConverter_tempos, "f")[i];
+        for (let t of __classPrivateFieldGet(this, _TickConverter_tempos, "f")) {
             if (t.ticks > ticks) {
                 break;
             }
@@ -245,7 +276,8 @@ class SmfReader {
     constructor(ar) {
         _SmfReader_instances.add(this);
         _SmfReader_reader.set(this, void 0);
-        _SmfReader_events.set(this, void 0);
+        _SmfReader_loaded.set(this, false);
+        _SmfReader_events.set(this, []);
         __classPrivateFieldSet(this, _SmfReader_reader, new BytesReader(ar), "f");
     }
     getEvents() {
@@ -253,7 +285,7 @@ class SmfReader {
         return __classPrivateFieldGet(this, _SmfReader_events, "f");
     }
 }
-_SmfReader_reader = new WeakMap(), _SmfReader_events = new WeakMap(), _SmfReader_instances = new WeakSet(), _SmfReader_onInvalidFormat = function _SmfReader_onInvalidFormat() {
+_SmfReader_reader = new WeakMap(), _SmfReader_loaded = new WeakMap(), _SmfReader_events = new WeakMap(), _SmfReader_instances = new WeakSet(), _SmfReader_onInvalidFormat = function _SmfReader_onInvalidFormat() {
     throw 'Unexpected byte found near index ' +
         (__classPrivateFieldGet(this, _SmfReader_reader, "f").getPos() - 1);
 }, _SmfReader_ensureU8 = function _SmfReader_ensureU8(v) {
@@ -273,7 +305,7 @@ _SmfReader_reader = new WeakMap(), _SmfReader_events = new WeakMap(), _SmfReader
 }, _SmfReader_withReader = function _SmfReader_withReader(callback) {
     callback(__classPrivateFieldGet(this, _SmfReader_reader, "f"));
 }, _SmfReader_load = function _SmfReader_load() {
-    if (__classPrivateFieldGet(this, _SmfReader_events, "f")) {
+    if (__classPrivateFieldGet(this, _SmfReader_loaded, "f")) {
         return;
     }
     __classPrivateFieldSet(this, _SmfReader_events, [], "f");
@@ -286,6 +318,7 @@ _SmfReader_reader = new WeakMap(), _SmfReader_events = new WeakMap(), _SmfReader
     __classPrivateFieldGet(this, _SmfReader_events, "f").sort((a, b) => {
         return a.timeStamp - b.timeStamp;
     });
+    __classPrivateFieldSet(this, _SmfReader_loaded, true, "f");
 }, _SmfReader_loadOld = function _SmfReader_loadOld() {
     // Old parser that can only read self-created MIDI files.
     console.log("Parsing a midi file...");
@@ -308,7 +341,6 @@ _SmfReader_reader = new WeakMap(), _SmfReader_events = new WeakMap(), _SmfReader
     ]);
     const trackSize = __classPrivateFieldGet(this, _SmfReader_reader, "f").readU32();
     debug("Track size", trackSize);
-    let lastStatus = 0;
     let totalTime = 0;
     for (;;) {
         const time = __classPrivateFieldGet(this, _SmfReader_reader, "f").readVar();
@@ -416,7 +448,7 @@ _SmfReader_reader = new WeakMap(), _SmfReader_events = new WeakMap(), _SmfReader
                 }
                 lastStatus = status;
                 const statusType = status & 0xf0;
-                const channel = status & 0x0f;
+                // const _channel = status & 0x0f;
                 // TODO: Ignore non-channel-0 data??
                 let data2 = 0;
                 switch (statusType) {
@@ -443,7 +475,7 @@ class SmfWriter {
     constructor() {
         _SmfWriter_instances.add(this);
         _SmfWriter_writer.set(this, new BytesWriter());
-        _SmfWriter_trackLengthPos.set(this, void 0);
+        _SmfWriter_trackLengthPos.set(this, 0);
         _SmfWriter_closed.set(this, false);
         __classPrivateFieldGet(this, _SmfWriter_instances, "m", _SmfWriter_withWriter).call(this, (w) => {
             w.writeU8(0x4D); // M
@@ -502,8 +534,8 @@ class SmfWriter {
     }
     writeMessage(deltaTimeMs, data) {
         __classPrivateFieldGet(this, _SmfWriter_writer, "f").writeVar(deltaTimeMs / (1000 / TICKS_PER_SECOND));
-        for (let i = 0; i < data.length; i++) {
-            __classPrivateFieldGet(this, _SmfWriter_writer, "f").writeU8(data[i]);
+        for (let d of data) {
+            __classPrivateFieldGet(this, _SmfWriter_writer, "f").writeU8(d);
         }
     }
 }
@@ -552,7 +584,7 @@ function downloadMidi(blob, filename) {
 function loadMidi(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = function (event) {
+        reader.onload = function (_event) {
             const ar = new Uint8Array(reader.result);
             console.log("Read from file", file);
             try {
