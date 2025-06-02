@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work Timer</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tone.js for audio feedback -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <style>
+        /* Custom styles to supplement Tailwind */
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent; /* Disable tap highlight on mobile */
+        }
+        /* Style for the timer circle progress */
+        .timer-circle {
+            transition: stroke-dashoffset 1s linear;
+        }
+        /* Simple transition for background color changes */
+        .transition-bg {
+            transition: background-color 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen transition-bg" id="app-body">
+    <div class="w-full max-w-md mx-auto p-4 md:p-8 bg-gray-800 rounded-2xl shadow-2xl">
+        <h1 class="text-3xl md:text-4xl font-bold text-center mb-6 text-cyan-400">Work Timer</h1>
+
+        <!-- Timer Display -->
+        <div id="timer-display" class="relative w-48 h-48 md:w-64 md:h-64 mx-auto mb-6 flex flex-col items-center justify-center">
+            <svg class="absolute inset-0" viewbox="0 0 100 100">
+                <circle class="text-gray-700" stroke-width="5" stroke="currentColor" fill="transparent" r="45" cx="50" cy="50" />
+                <circle id="timer-progress" class="text-cyan-400 timer-circle" stroke-width="5" stroke-linecap="round" stroke="currentColor" fill="transparent" r="45" cx="50" cy="50" style="stroke-dasharray: 283; stroke-dashoffset: 283; transform: rotate(-90deg); transform-origin: 50% 50%;" />
+            </svg>
+            <div id="time-left" class="text-4xl md:text-6xl font-bold">00:00</div>
+            <div id="timer-state" class="text-lg md:text-xl font-medium mt-2 text-gray-400">Ready</div>
+        </div>
+        
+        <div id="reps-display" class="text-center text-lg mb-6 font-medium text-gray-300">
+            Rep <span id="current-rep">0</span> / <span id="total-reps-display">0</span>
+        </div>
+
+        <!-- Input Fields -->
+        <div id="settings" class="space-y-4 mb-6">
+            <div>
+                <label for="work-duration" class="block text-sm font-medium text-gray-400 mb-1">Work (seconds)</label>
+                <input type="number" id="work-duration" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 focus:outline-none" value="25">
+            </div>
+            <div>
+                <label for="pause-duration" class="block text-sm font-medium text-gray-400 mb-1">Pause (seconds)</label>
+                <input type="number" id="pause-duration" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 focus:outline-none" value="5">
+            </div>
+            <div>
+                <label for="num-reps" class="block text-sm font-medium text-gray-400 mb-1">Reps</label>
+                <input type="number" id="num-reps" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-cyan-500 focus:outline-none" value="3">
+            </div>
+        </div>
+
+        <!-- Control Buttons -->
+        <div class="grid grid-cols-2 gap-4">
+            <button id="start-pause-btn" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-lg text-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-50">
+                Start
+            </button>
+            <button id="reset-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg text-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50">
+                Reset
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Element References
+        const timeLeftDisplay = document.getElementById('time-left');
+        const timerStateDisplay = document.getElementById('timer-state');
+        const currentRepDisplay = document.getElementById('current-rep');
+        const totalRepsDisplay = document.getElementById('total-reps-display');
+        const startPauseBtn = document.getElementById('start-pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const workDurationInput = document.getElementById('work-duration');
+        const pauseDurationInput = document.getElementById('pause-duration');
+        const numRepsInput = document.getElementById('num-reps');
+        const appBody = document.getElementById('app-body');
+        const timerProgress = document.getElementById('timer-progress');
+
+        // Timer State Variables
+        let timerInterval = null;
+        let remainingTime = 0;
+        let currentRep = 0;
+        let totalReps = 0;
+        let workDuration = 0;
+        let pauseDuration = 0;
+        let isPaused = false;
+        let currentState = 'Idle'; // 'Idle', 'Work', 'Pause'
+        let initialDuration = 0; // To calculate progress
+        const circleCircumference = 2 * Math.PI * 45; // 2 * PI * r
+
+        // Audio synthesizer for sound feedback
+        const synth = new Tone.Synth().toDestination();
+
+        /**
+         * Formats a time in seconds into a MM:SS string.
+         * @param {number} timeInSeconds - The time to format.
+         * @returns {string} The formatted time string.
+         */
+        const formatTime = (timeInSeconds) => {
+            const time = Math.max(0, timeInSeconds);
+            const minutes = Math.floor(time / 60).toString().padStart(2, '0');
+            const seconds = (time % 60).toString().padStart(2, '0');
+            return `${minutes}:${seconds}`;
+        };
+
+        /**
+         * Updates the timer display with the remaining time.
+         */
+        function updateDisplay() {
+            timeLeftDisplay.textContent = formatTime(remainingTime);
+            document.title = `${formatTime(remainingTime)} - ${currentState}`;
+            
+            // Update progress circle. Handle division by zero.
+            const progress = initialDuration > 0 ? (initialDuration - remainingTime) / initialDuration : 0;
+            const dashoffset = circleCircumference * (1 - progress);
+            timerProgress.style.strokeDashoffset = dashoffset;
+        }
+
+        /**
+         * Manages the countdown timer logic.
+         */
+        function tick() {
+            if (isPaused) return;
+
+            remainingTime--;
+            updateDisplay();
+
+            // Play countdown sounds for the Work timer
+            if (currentState === 'Work') {
+                if (remainingTime <= 3 && remainingTime > 0) { // Beeps for 3, 2, 1
+                    synth.triggerAttackRelease("A4", "0.1");
+                } else if (remainingTime === 0) { // Sound at exactly 0
+                    synth.triggerAttackRelease("C5", "0.2");
+                }
+            }
+
+            if (remainingTime < 0) {
+                // Sound for pause timer transition
+                if (currentState === 'Pause') {
+                     synth.triggerAttackRelease("C5", "0.2");
+                }
+                
+                if (currentState === 'Work') {
+                    // Check if it's the last repetition.
+                    if (currentRep >= totalReps) {
+                        // If so, the session is finished.
+                        resetTimer();
+                        timerStateDisplay.textContent = "Finished!";
+                        Tone.Transport.start();
+                        const seq = new Tone.Sequence((time, note) => {
+                            synth.triggerAttackRelease(note, 0.1, time);
+                        }, ["C5", "E5", "G5"], "8n").start(0);
+                        setTimeout(() => seq.stop(), 500);
+                        return; // End the tick cycle here.
+                    } else {
+                        // Otherwise, proceed to the pause state.
+                        currentState = 'Pause';
+                        timerStateDisplay.textContent = 'Pause';
+                        appBody.classList.replace('bg-green-900', 'bg-blue-900');
+                        timerProgress.classList.replace('text-cyan-400', 'text-blue-400');
+                        remainingTime = pauseDuration;
+                        initialDuration = pauseDuration;
+                    }
+                } else if (currentState === 'Pause') {
+                    currentRep++;
+                    // Proceed to the next work state.
+                    currentState = 'Work';
+                    timerStateDisplay.textContent = 'Work';
+                    appBody.classList.replace('bg-blue-900', 'bg-green-900');
+                    timerProgress.classList.replace('text-blue-400', 'text-cyan-400');
+                    remainingTime = workDuration;
+                    initialDuration = workDuration;
+                }
+                currentRepDisplay.textContent = currentRep > totalReps ? totalReps : currentRep;
+                updateDisplay();
+            }
+        }
+        
+        /**
+         * Handles the start/pause functionality of the timer.
+         */
+        function handleStartPause() {
+            if (Tone.context.state !== 'running') {
+                Tone.start();
+            }
+
+            if (currentState === 'Idle') {
+                if (workDuration <= 0 || pauseDuration < 0 || totalReps <= 0) {
+                    timerStateDisplay.textContent = "Invalid inputs!";
+                    timerStateDisplay.classList.add('text-red-400');
+                    setTimeout(() => {
+                        timerStateDisplay.textContent = "Ready";
+                        timerStateDisplay.classList.remove('text-red-400');
+                    }, 2000);
+                    return;
+                }
+
+                currentRep = 1;
+                currentState = 'Work';
+                isPaused = false;
+                remainingTime = workDuration;
+                initialDuration = workDuration;
+                
+                startPauseBtn.textContent = 'Pause';
+                appBody.classList.replace('bg-gray-900', 'bg-green-900');
+                timerProgress.classList.add('text-cyan-400');
+                timerStateDisplay.textContent = 'Work';
+                currentRepDisplay.textContent = currentRep;
+                
+                updateDisplay();
+                timerInterval = setInterval(tick, 1000);
+            } else {
+                isPaused = !isPaused;
+                if (isPaused) {
+                    startPauseBtn.textContent = 'Resume';
+                    clearInterval(timerInterval);
+                    timerStateDisplay.textContent += " (Paused)";
+                } else {
+                    startPauseBtn.textContent = 'Pause';
+                    timerStateDisplay.textContent = currentState;
+                    timerInterval = setInterval(tick, 1000);
+                }
+            }
+        }
+        
+        /**
+         * Resets the timer to its initial state based on input values.
+         */
+        function resetTimer() {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            isPaused = false;
+            currentState = 'Idle';
+            currentRep = 0;
+            
+            workDuration = parseInt(workDurationInput.value, 10) || 0;
+            pauseDuration = parseInt(pauseDurationInput.value, 10) || 0;
+            totalReps = parseInt(numRepsInput.value, 10) || 0;
+
+            remainingTime = workDuration;
+            initialDuration = workDuration;
+            
+            startPauseBtn.textContent = 'Start';
+            timerStateDisplay.textContent = 'Ready';
+            document.title = 'Work Timer';
+            currentRepDisplay.textContent = '0';
+            totalRepsDisplay.textContent = totalReps;
+            appBody.className = 'bg-gray-900 text-white flex items-center justify-center min-h-screen transition-bg';
+            timerProgress.classList.remove('text-blue-400');
+            timerProgress.classList.add('text-cyan-400');
+            timerProgress.style.strokeDashoffset = circleCircumference;
+            updateDisplay();
+        }
+
+        /**
+         * Parses URL query parameters and sets the initial values of the input fields.
+         */
+        function setInitialValuesFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const workParam = urlParams.get('work');
+            const pauseParam = urlParams.get('pause');
+            const repParam = urlParams.get('rep');
+
+            if (workParam && !isNaN(parseInt(workParam, 10)) && parseInt(workParam, 10) > 0) {
+                workDurationInput.value = parseInt(workParam, 10);
+            }
+            if (pauseParam && !isNaN(parseInt(pauseParam, 10)) && parseInt(pauseParam, 10) >= 0) {
+                pauseDurationInput.value = parseInt(pauseParam, 10);
+            }
+            if (repParam && !isNaN(parseInt(repParam, 10)) && parseInt(repParam, 10) > 0) {
+                numRepsInput.value = parseInt(repParam, 10);
+            }
+        }
+
+        // --- Event Listeners ---
+        startPauseBtn.addEventListener('click', handleStartPause);
+        resetBtn.addEventListener('click', resetTimer);
+
+        workDurationInput.addEventListener('input', (e) => {
+            const newDuration = parseInt(e.target.value, 10);
+            if (isNaN(newDuration) || newDuration <= 0) return;
+            workDuration = newDuration;
+            if (currentState === 'Work') {
+                initialDuration = workDuration;
+                if (remainingTime > workDuration) remainingTime = workDuration;
+            } else if (currentState === 'Idle') {
+                remainingTime = workDuration;
+                initialDuration = workDuration;
+            }
+            updateDisplay();
+        });
+
+        pauseDurationInput.addEventListener('input', (e) => {
+            const newDuration = parseInt(e.target.value, 10);
+            if (isNaN(newDuration) || newDuration < 0) return;
+            pauseDuration = newDuration;
+            if (currentState === 'Pause') {
+                initialDuration = pauseDuration;
+                if (remainingTime > pauseDuration) remainingTime = pauseDuration;
+                updateDisplay();
+            }
+        });
+
+        numRepsInput.addEventListener('input', (e) => {
+            const newReps = parseInt(e.target.value, 10);
+            if (isNaN(newReps) || newReps <= 0) return;
+            totalReps = newReps;
+            totalRepsDisplay.textContent = totalReps;
+        });
+
+        // Initialize display on page load
+        window.addEventListener('load', () => {
+            setInitialValuesFromURL(); // Set values from URL first...
+            resetTimer(); // ...then initialize the timer state with those values.
+        });
+    </script>
+</body>
+</html>
