@@ -287,6 +287,16 @@
         startPauseBtn.addEventListener('click', handleStartPause);
         resetBtn.addEventListener('click', resetTimer);
 
+        // Listen for the Enter key globally to start/pause the timer.
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                // Prevent the default browser action for the Enter key (e.g., form submission).
+                event.preventDefault();
+                // Trigger the same function as the start/pause button.
+                handleStartPause();
+            }
+        });
+
         workDurationInput.addEventListener('input', (e) => {
             const newDuration = parseInt(e.target.value, 10);
             if (isNaN(newDuration) || newDuration <= 0) return;
