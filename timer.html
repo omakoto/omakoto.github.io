@@ -138,10 +138,12 @@
 
             // Play countdown sounds for the Work timer
             if (currentState === 'Work') {
-                if (remainingTime <= 3 && remainingTime > 0) { // Beeps for 3, 2, 1
+                if (remainingTime == workDuration) {
+                    synth.triggerAttackRelease("C5", "0.2");
+                } else if (remainingTime <= 3 && remainingTime > 0) { // Beeps for 3, 2, 1
                     synth.triggerAttackRelease("A4", "0.1");
                 } else if (remainingTime === 0) { // Sound at exactly 0
-                    synth.triggerAttackRelease("C5", "0.2");
+                    synth.triggerAttackRelease("A5", "0.2");
                 }
             }
 
