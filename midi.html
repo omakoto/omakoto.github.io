@@ -65,7 +65,6 @@
             const connectContainer = document.getElementById('connect-container');
 
             // --- MIDI Event Name Mapping ---
-            // A map to translate the MIDI command byte to a human-readable name.
             const MIDI_COMMANDS = {
                 0x8: 'Note Off',
                 0x9: 'Note On',
@@ -75,6 +74,20 @@
                 0xD: 'Channel Pressure', // (Aftertouch)
                 0xE: 'Pitch Bend Change'
             };
+
+            // --- MIDI Control Change Names ---
+            const MIDI_CONTROL_CHANGE = {
+                0: 'Bank Select', 1: 'Modulation', 2: 'Breath Controller', 4: 'Foot Controller',
+                5: 'Portamento Time', 6: 'Data Entry MSB', 7: 'Channel Volume', 8: 'Balance',
+                10: 'Pan', 11: 'Expression Controller', 12: 'Effect Control 1', 13: 'Effect Control 2',
+                16: 'General Purpose Controller 1', 17: 'General Purpose Controller 2', 18: 'General Purpose Controller 3', 19: 'General Purpose Controller 4',
+                64: 'Damper Pedal (Sustain)', 65: 'Portamento On/Off', 66: 'Sostenuto', 67: 'Soft Pedal',
+                68: 'Legato Footswitch', 69: 'Hold 2', 70: 'Sound Controller 1 (Sound Variation)', 71: 'Sound Controller 2 (Timbre/Harmonic Content)',
+                72: 'Sound Controller 3 (Release Time)', 73: 'Sound Controller 4 (Attack Time)', 74: 'Sound Controller 5 (Brightness)',
+                84: 'Portamento Control', 91: 'Effects 1 Depth (Reverb)', 93: 'Effects 3 Depth (Chorus)',
+                121: 'Reset All Controllers', 123: 'All Notes Off'
+            };
+
 
             // --- Initial Check for Web MIDI API ---
             if (navigator.requestMIDIAccess) {
@@ -104,7 +117,6 @@
                 statusEl.classList.remove('text-blue-400');
                 statusEl.classList.add('text-green-400');
                 
-                // Hide the connect button and show the log
                 connectContainer.classList.add('hidden');
                 logContainer.classList.remove('hidden');
 
@@ -112,27 +124,23 @@
                 let deviceCount = 0;
 
                 for (let input = inputs.next(); input && !input.done; input = inputs.next()) {
-                    // Log each connected device
                     logMessage(`Connected to: ${input.value.name}`, 'info');
-                    // Attach the message handler to each input device
                     input.value.onmidimessage = getMIDIMessage;
                     deviceCount++;
                 }
 
                 if (deviceCount === 0) {
-                     logMessage('No MIDI input devices found. Plug one in and refresh.', 'warning');
+                     logMessage('No MIDI input devices found. Plug one in to start.', 'warning');
                 }
 
-                // Listen for changes in device connection status
                 midiAccess.onstatechange = (event) => {
                     const port = event.port;
-                    const state = port.state; // "connected" or "disconnected"
-                    const type = port.type; // "input" or "output"
+                    const state = port.state;
+                    const type = port.type;
                     const name = port.name;
 
                     if (type === 'input') {
                          logMessage(`Device ${state}: ${name}`, 'info');
-                         // If a new device is connected, start listening to it automatically.
                          if (state === 'connected') {
                              port.onmidimessage = getMIDIMessage;
                          }
@@ -152,21 +160,59 @@
             }
 
             /**
-             * Handles incoming MIDI messages.
+             * Handles and decodes incoming MIDI messages.
              * @param {MIDIMessageEvent} message - The MIDI message event.
              */
             function getMIDIMessage(message) {
-                const data = message.data; // Uint8Array
+                const data = message.data;
                 if (data.length === 0) return;
 
                 const commandByte = data[0] >> 4;
-                const channel = (data[0] & 0x0f) + 1; // Channels 1-16
+                const channel = (data[0] & 0x0f) + 1;
                 const eventName = MIDI_COMMANDS[commandByte] || 'Unknown Event';
-                
-                // Convert all data bytes to a space-separated hex string
                 const hexString = Array.from(data).map(byte => byte.toString(16).padStart(2, '0').toUpperCase()).join(' ');
 
-                const fullMessage = `<span class="text-cyan-400">[${eventName}]</span> Ch: ${channel} - Hex: ${hexString}`;
+                let details = '';
+
+                switch (commandByte) {
+                    case 0x9: // Note On
+                    case 0x8: // Note Off
+                        const note = data[1];
+                        const velocity = data[2];
+                        details = `Note: ${note}, Vel: ${velocity}`;
+                        break;
+                    
+                    case 0xB: // Control Change
+                        const controllerNumber = data[1];
+                        const controllerValue = data[2];
+                        const controllerName = MIDI_CONTROL_CHANGE[controllerNumber] || `CC #${controllerNumber}`;
+                        details = `${controllerName}: ${controllerValue}`;
+                        break;
+                        
+                    case 0xE: // Pitch Bend
+                        // Combine two 7-bit bytes into a 14-bit value. Center is 8192.
+                        const pitchValue = (data[2] << 7) | data[1];
+                        details = `Value: ${pitchValue}`;
+                        break;
+
+                    case 0xA: // Polyphonic Key Pressure (Note Aftertouch)
+                        const pressureNote = data[1];
+                        const pressureValue = data[2];
+                        details = `Note: ${pressureNote}, Pressure: ${pressureValue}`;
+                        break;
+
+                    case 0xD: // Channel Pressure (Channel Aftertouch)
+                        const channelPressure = data[1];
+                        details = `Pressure: ${channelPressure}`;
+                        break;
+                    
+                    case 0xC: // Program Change
+                        const programNum = data[1];
+                        details = `Program: ${programNum}`;
+                        break;
+                }
+                
+                const fullMessage = `<span class="text-cyan-400">[${eventName}]</span> Ch: ${channel} | ${details} | Hex: ${hexString}`;
                 logMessage(fullMessage, 'event');
             }
             
