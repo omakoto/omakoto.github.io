@@ -1,33 +1,233 @@
 <!DOCTYPE html>
 <html>
 <head>
-
+    <title>Webcam Preview</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, user-scalable=yes, initial-scale=1, maximum-scale=1">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta id="theme-color" name="theme-color" content="#ffffff">
-
-    <base target="_blank">
-
-    <title>Webcam</title>
-
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700" rel="stylesheet" type="text/css">
-    <link rel="stylesheet" href="main.css">
+    <style>
+        /* Base styles */
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 300;
+            background-color: #222;
+        }
 
+        /* Main container for the app */
+        div#container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Styling for the video source selector dropdown */
+        .select {
+            margin: 0;
+            padding: 10px 15px;
+            position: fixed;
+            z-index: 100;
+            left: 1em;
+            top: 1em;
+            background-color: rgba(0, 0, 0, 0.6);
+            border-radius: 8px;
+            color: white;
+            /* Change 1: Bigger font for the selector */
+            font-size: 1.1em;
+        }
+
+        .select label {
+            margin-right: 10px;
+        }
+        
+        select {
+             border-radius: 4px;
+             padding: 4px;
+             border: 1px solid #555;
+             background-color: #333;
+             color: white;
+        }
+
+        /* Video element styling */
+        video {
+            background: #000;
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Prevents video from being stretched */
+        }
+        
+        /* Styling for the error message box */
+        .error-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #ffdddd;
+            border: 1px solid #f44336;
+            color: black;
+            padding: 20px;
+            border-radius: 8px;
+            z-index: 200;
+            max-width: 80%;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            font-size: 1.2em;
+        }
+
+        /* Utility class to hide elements */
+        .hidden {
+            display: none;
+        }
+    </style>
 </head>
-
 <body>
-<div id="container">
+    <div id="container">
+        <!-- Dropdown for selecting video source -->
+        <div class="select">
+            <label for="videoSource">Video source:</label>
+            <select id="videoSource"></select>
+        </div>
 
-    <div class="select">
-        <label for="videoSource">Video source: </label><select id="videoSource"></select>
+        <!-- Element to display error messages -->
+        <div id="error-message" class="error-box hidden"></div>
+
+        <!-- Video element to display webcam feed -->
+        <video id="video" playsinline autoplay></video>
     </div>
 
-    <video id="video" playsinline autoplay></video>
+    <!-- WebRTC adapter for cross-browser compatibility -->
+    <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+    <script>
+        'use strict';
 
-</div>
+        // Get references to DOM elements
+        const videoElement = document.querySelector('video');
+        const videoSelect = document.querySelector('select#videoSource');
+        const errorMsgElement = document.querySelector('#error-message');
 
-<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
-<script src="js/main.js" async></script>
+        /**
+         * Displays an error message on the screen.
+         * @param {string} msg The message to display.
+         * @param {Error} [error] The associated error object for console logging.
+         */
+        function displayError(msg, error) {
+            console.error(msg, error || '');
+            errorMsgElement.classList.remove('hidden');
+            errorMsgElement.textContent = msg;
+            // Automatically hide the message after 5 seconds
+            setTimeout(() => {
+                errorMsgElement.classList.add('hidden');
+            }, 5000);
+        }
+
+        /**
+         * Populates the video source dropdown with available devices.
+         * @param {MediaDeviceInfo[]} deviceInfos - Array of media device info objects.
+         */
+        function gotDevices(deviceInfos) {
+            const previousSelection = videoSelect.value;
+            // Clear existing options
+            while (videoSelect.firstChild) {
+                videoSelect.removeChild(videoSelect.firstChild);
+            }
+
+            // Add an option for each video input device
+            for (const deviceInfo of deviceInfos) {
+                if (deviceInfo.kind === 'videoinput') {
+                    const option = document.createElement('option');
+                    option.value = deviceInfo.deviceId;
+                    option.text = deviceInfo.label || `Camera ${videoSelect.length + 1}`;
+                    videoSelect.appendChild(option);
+                }
+            }
+
+            // Try to restore the previously selected device
+            if (Array.from(videoSelect.options).some(opt => opt.value === previousSelection)) {
+                videoSelect.value = previousSelection;
+            }
+
+            // If the previously selected camera was removed, restart the stream with a new default
+            if (previousSelection && !Array.from(videoSelect.options).some(opt => opt.value === previousSelection)) {
+                console.log("Selected camera was removed. Restarting with default.");
+                start();
+            }
+        }
+
+        /**
+         * Fetches media devices and updates the dropdown.
+         */
+        function updateDeviceList() {
+            navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(handleError);
+        }
+
+        // Change 2: Listen for device changes (e.g., plugging in a new webcam)
+        navigator.mediaDevices.addEventListener('devicechange', event => {
+            console.log('Device change detected, updating list.');
+            updateDeviceList();
+        });
+
+        /**
+         * Handles the stream from getUserMedia.
+         * @param {MediaStream} stream - The media stream from the webcam.
+         */
+        function gotStream(stream) {
+            window.stream = stream; // make stream available to console
+            videoElement.srcObject = stream;
+            videoElement.play();
+            // After getting the stream, update the device list again to get proper device labels
+            return navigator.mediaDevices.enumerateDevices();
+        }
+
+        /**
+         * Handles errors from getUserMedia.
+         * @param {Error} error - The error object.
+         */
+        function handleError(error) {
+            displayError(`Error accessing camera: ${error.message}`, error);
+        }
+
+        /**
+         * Starts the video stream with the selected device and settings.
+         */
+        function start() {
+            // Stop any existing stream
+            if (window.stream) {
+                window.stream.getTracks().forEach(track => {
+                    track.stop();
+                });
+            }
+
+            const videoSource = videoSelect.value;
+            // Change 3: Define constraints to request the highest available resolution
+            const constraints = {
+                video: {
+                    deviceId: videoSource ? { exact: videoSource } : undefined,
+                    width: { ideal: 4096 }, // Request 4K width
+                    height: { ideal: 2160 } // Request 4K height
+                }
+            };
+
+            // Request access to the camera with the specified constraints
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then(gotStream)
+                .then(gotDevices)
+                .catch(handleError);
+        }
+
+        // --- Initialisation ---
+
+        // When the user selects a different camera, restart the stream
+        videoSelect.onchange = start;
+
+        // Populate the device list and start the stream on page load
+        updateDeviceList();
+        start();
+    </script>
 </body>
 </html>
