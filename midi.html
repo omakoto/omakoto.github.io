@@ -167,6 +167,11 @@
                 const data = message.data;
                 if (data.length === 0) return;
 
+                // Ignore "active sense".
+                if (data[0] == 254) {
+                    return;
+                }
+
                 const commandByte = data[0] >> 4;
                 const channel = (data[0] & 0x0f) + 1;
                 const eventName = MIDI_COMMANDS[commandByte] || 'Unknown Event';
@@ -191,7 +196,7 @@
                         
                     case 0xE: // Pitch Bend
                         // Combine two 7-bit bytes into a 14-bit value. Center is 8192.
-                        const pitchValue = (data[2] << 7) | data[1];
+                        const pitchValue = ((data[2] << 7) | data[1]) - 8192;
                         details = `Value: ${pitchValue}`;
                         break;
 
