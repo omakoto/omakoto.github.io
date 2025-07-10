@@ -147,28 +147,53 @@
                 }
             }
 
-            // Try to restore the previously selected device
+            // Try to restore the previously selected device, if it still exists
             if (Array.from(videoSelect.options).some(opt => opt.value === previousSelection)) {
                 videoSelect.value = previousSelection;
-            }
-
-            // If the previously selected camera was removed, restart the stream with a new default
-            if (previousSelection && !Array.from(videoSelect.options).some(opt => opt.value === previousSelection)) {
-                console.log("Selected camera was removed. Restarting with default.");
-                start();
             }
         }
 
         /**
-         * Fetches media devices and updates the dropdown.
+         * Fetches media devices, updates the dropdown, and handles device connection/disconnection events.
          */
-        function updateDeviceList() {
-            navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(handleError);
+        async function updateDeviceList() {
+            try {
+                // Check how many video devices are currently listed in the dropdown
+                const previousVideoDeviceCount = Array.from(videoSelect.options).length;
+
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                gotDevices(devices); // This re-populates the dropdown
+
+                const currentVideoDeviceCount = Array.from(videoSelect.options).length;
+
+                // Case 1: A camera was just connected for the first time (e.g., on page load or plug-in).
+                if (previousVideoDeviceCount === 0 && currentVideoDeviceCount > 0) {
+                    console.log('First camera detected. Starting stream automatically.');
+                    start();
+                    return; // The stream has been started, no need for the disconnect check.
+                }
+
+                // Case 2: The currently active camera was disconnected.
+                if (window.stream) {
+                    const videoTrack = window.stream.getVideoTracks()[0];
+                    if (videoTrack && videoTrack.getSettings().deviceId) {
+                        const currentDeviceId = videoTrack.getSettings().deviceId;
+                        const deviceExists = devices.some(device => device.deviceId === currentDeviceId);
+                        
+                        if (!deviceExists) {
+                            console.log('Active camera has been disconnected. Restarting stream.');
+                            start(); // Restart with a new default device
+                        }
+                    }
+                }
+            } catch (e) {
+                handleError(e);
+            }
         }
 
-        // Change 2: Listen for device changes (e.g., plugging in a new webcam)
+        // Listen for device changes (e.g., plugging in or unplugging a webcam)
         navigator.mediaDevices.addEventListener('devicechange', event => {
-            console.log('Device change detected, updating list.');
+            console.log('Device change detected, updating device list and checking stream.');
             updateDeviceList();
         });
 
@@ -228,9 +253,9 @@
         // When the user selects a different camera, restart the stream
         videoSelect.onchange = start;
 
-        // Populate the device list and start the stream on page load
+        // On page load, update the device list. This will also trigger the initial
+        // stream if a camera is available.
         updateDeviceList();
-        start();
     </script>
 </body>
 </html>
