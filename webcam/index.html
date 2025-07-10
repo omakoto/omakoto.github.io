@@ -204,12 +204,15 @@
             }
 
             const videoSource = videoSelect.value;
-            // Change 3: Define constraints to request the highest available resolution
+            // Use advanced constraints to specify a list of resolutions to try in order.
             const constraints = {
                 video: {
                     deviceId: videoSource ? { exact: videoSource } : undefined,
-                    width: { ideal: 4096 }, // Request 4K width
-                    height: { ideal: 2160 } // Request 4K height
+                    advanced: [
+                        {width: {exact: 1920}, height: {exact: 1600}},
+                        {width: {exact: 1024}, height: {exact: 768}},
+                        {width: {exact: 800}, height: {exact: 600}}
+                    ]
                 }
             };
 
