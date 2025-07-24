@@ -37,7 +37,7 @@
     <div id="controls">
         <button id="recordButton">Record</button>
     </div>
-    <canvas id="waveform" width="500" height="200"></canvas>
+    <canvas id="waveform" width="2000" height="800"></canvas>
     <h2>Recordings</h2>
     <ul id="recordingsList"></ul>
 
@@ -98,7 +98,7 @@
                 const bufferLength = analyser.frequencyBinCount;
                 dataArray = new Uint8Array(bufferLength);
 
-                drawWaveform();
+                drawSpectrum();
 
             } catch (err) {
                 console.error("Error starting recording:", err);
@@ -119,35 +119,25 @@
             }
         }
 
-        function drawWaveform() {
-            animationFrameId = requestAnimationFrame(drawWaveform);
-            analyser.getByteTimeDomainData(dataArray);
+        function drawSpectrum() {
+            animationFrameId = requestAnimationFrame(drawSpectrum);
+            analyser.getByteFrequencyData(dataArray);
 
             canvasCtx.fillStyle = 'rgb(240, 240, 240)';
             canvasCtx.fillRect(0, 0, waveformCanvas.width, waveformCanvas.height);
 
-            canvasCtx.lineWidth = 2;
-            canvasCtx.strokeStyle = 'rgb(0, 0, 0)';
-            canvasCtx.beginPath();
-
-            const sliceWidth = waveformCanvas.width * 1.0 / dataArray.length;
+            const barWidth = (waveformCanvas.width / dataArray.length) * 2.5;
+            let barHeight;
             let x = 0;
 
             for (let i = 0; i < dataArray.length; i++) {
-                const v = dataArray[i] / 128.0;
-                const y = v * waveformCanvas.height / 2;
+                barHeight = dataArray[i];
 
-                if (i === 0) {
-                    canvasCtx.moveTo(x, y);
-                } else {
-                    canvasCtx.lineTo(x, y);
-                }
+                canvasCtx.fillStyle = 'rgb(' + (barHeight + 100) + ',50,50)';
+                canvasCtx.fillRect(x, waveformCanvas.height - barHeight / 2, barWidth, barHeight / 2);
 
-                x += sliceWidth;
+                x += barWidth + 1;
             }
-
-            canvasCtx.lineTo(waveformCanvas.width, waveformCanvas.height / 2);
-            canvasCtx.stroke();
         }
     </script>
 </body>
