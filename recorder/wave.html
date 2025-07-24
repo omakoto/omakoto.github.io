@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Recorder with Waveform</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        #controls {
+            margin-top: 20px;
+        }
+        #recordButton {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #waveform {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            background-color: #fff;
+        }
+        #recordingsList {
+            list-style: none;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Web Audio Recorder</h1>
+    <div id="controls">
+        <button id="recordButton">Record</button>
+    </div>
+    <canvas id="waveform" width="500" height="200"></canvas>
+    <h2>Recordings</h2>
+    <ul id="recordingsList"></ul>
+
+    <script>
+        const recordButton = document.getElementById('recordButton');
+        const waveformCanvas = document.getElementById('waveform');
+        const recordingsList = document.getElementById('recordingsList');
+        const canvasCtx = waveformCanvas.getContext('2d');
+
+        let isRecording = false;
+        let mediaRecorder;
+        let audioChunks = [];
+        let audioContext;
+        let analyser;
+        let source;
+        let dataArray;
+        let animationFrameId;
+
+        recordButton.addEventListener('click', () => {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        });
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                isRecording = true;
+                recordButton.textContent = 'Stop';
+                audioChunks = [];
+
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const li = document.createElement('li');
+                    const a = document.createElement('a');
+                    a.href = audioUrl;
+                    a.download = `recording-${new Date().toISOString()}.wav`;
+                    a.textContent = `Download Recording ${recordingsList.children.length + 1}`;
+                    li.appendChild(a);
+                    recordingsList.appendChild(li);
+                };
+                mediaRecorder.start();
+
+                // Web Audio API for visualization
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+
+                analyser.fftSize = 2048;
+                const bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+
+                drawWaveform();
+
+            } catch (err) {
+                console.error("Error starting recording:", err);
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            isRecording = false;
+            recordButton.textContent = 'Record';
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            if (audioContext) {
+                audioContext.close();
+            }
+        }
+
+        function drawWaveform() {
+            animationFrameId = requestAnimationFrame(drawWaveform);
+            analyser.getByteTimeDomainData(dataArray);
+
+            canvasCtx.fillStyle = 'rgb(240, 240, 240)';
+            canvasCtx.fillRect(0, 0, waveformCanvas.width, waveformCanvas.height);
+
+            canvasCtx.lineWidth = 2;
+            canvasCtx.strokeStyle = 'rgb(0, 0, 0)';
+            canvasCtx.beginPath();
+
+            const sliceWidth = waveformCanvas.width * 1.0 / dataArray.length;
+            let x = 0;
+
+            for (let i = 0; i < dataArray.length; i++) {
+                const v = dataArray[i] / 128.0;
+                const y = v * waveformCanvas.height / 2;
+
+                if (i === 0) {
+                    canvasCtx.moveTo(x, y);
+                } else {
+                    canvasCtx.lineTo(x, y);
+                }
+
+                x += sliceWidth;
+            }
+
+            canvasCtx.lineTo(waveformCanvas.width, waveformCanvas.height / 2);
+            canvasCtx.stroke();
+        }
+    </script>
+</body>
+</html>
